@@ -3,15 +3,15 @@ import ALUType::cmd_t;
 
 module ALU(
     input ALUType::cmd_t cmd,
-    input reg_t a,
-    input reg_t b,
+    input op_t a,
+    input op_t b,
     input bit clk,
-    output reg_t out,
+    output op_t out,
     output bit overflow,
     output bit zero
 );
     logic signed [32:0] out_e;
-    reg_t next_out;
+    op_t next_out;
 
     assign zero = out == 0;
 

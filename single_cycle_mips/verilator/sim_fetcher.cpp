@@ -30,7 +30,8 @@ public:
     }
 
     void afterEach(Fetcher_TestCase testcase, TPRINTER *t) override {
-        TASSERTF_INFO("%#-10x", DUT->inst, testcase.expected_inst, "read addr=%#x", testcase.addr);
+        auto name = colorize(lrpad(testcase.name), ForegroundColor::BLACK, BackgroundColor::BLUE);
+        TASSERTF_INFO("%#-10x", DUT->inst, testcase.expected_inst, "%s  addr=%#x", name, testcase.addr);
     }
 };
 
