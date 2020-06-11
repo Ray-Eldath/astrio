@@ -10,4 +10,5 @@ endif ()
 set(verilator_INCLUDE_DIR ${VERILATOR_ROOT}/include)
 find_package(althas REQUIRED)
 
+add_subdirectory(assembler)
 add_subdirectory(single_cycle_mips)
