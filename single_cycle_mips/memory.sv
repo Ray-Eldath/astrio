@@ -1,7 +1,7 @@
 import Types::*;
 import Parameters::*;
 
-module Storage(
+module Memory(
     input addr_t addr,
     input bit enable_write,
     input op_t write_data,
@@ -16,4 +16,4 @@ module Storage(
         else
             read_out <= mem[addr];
     end
-endmodule : Storage
+endmodule : Memory

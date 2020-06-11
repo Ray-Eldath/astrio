@@ -6,16 +6,19 @@ add_executable(sim_alu verilator/sim_alu.cpp)
 add_executable(sim_registers verilator/sim_registers.cpp)
 # Instruction Fetcher
 add_executable(sim_fetcher verilator/sim_fetcher.cpp)
-file(COPY inst.data
-        DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(sim_fetcher PRIVATE ../assembler)
 # Data Storage
-add_executable(sim_storage verilator/sim_storage.cpp)
+add_executable(sim_memory verilator/sim_memory.cpp)
+# CPU
+add_executable(sim_cpu verilator/sim_cpu.cpp)
+target_include_directories(sim_cpu PRIVATE ../assembler)
 
 #
 # verilate
 #
 
 set(VERILATOR_INCLUDES constants.sv types.sv)
+set(VERILATOR_INCLUDE_TYPES pc_type.sv alu_type.sv cpu_type.sv)
 
 verilate(sim_pc
         TRACE
@@ -41,8 +44,14 @@ verilate(sim_fetcher
         INCLUDE_DIRS "."
         PREFIX Fetcher)
 
-verilate(sim_storage
+verilate(sim_memory
         TRACE
-        SOURCES ${VERILATOR_INCLUDES} storage.sv
+        SOURCES ${VERILATOR_INCLUDES} memory.sv
         INCLUDE_DIRS "."
-        PREFIX Storage)
+        PREFIX Memory)
+
+verilate(sim_cpu
+        TRACE
+        SOURCES ${VERILATOR_INCLUDES} ${VERILATOR_INCLUDE_TYPES} pc.sv fetcher.sv registers.sv memory.sv alu.sv alu_controller.sv cpu.sv
+        INCLUDE_DIRS "."
+        PREFIX CPU)

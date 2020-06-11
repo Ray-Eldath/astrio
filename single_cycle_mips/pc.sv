@@ -1,16 +1,15 @@
 import Parameters::*;
-import PCType::cmd_t;
+import PCType::pc_cmd_t;
 import Types::addr_t;
 
 module PC(
-    input PCType::cmd_t cmd,
+    input PCType::pc_cmd_t cmd,
     input addr_t load_pc,
     input bit rst,
     input bit clk,
     output addr_t pc
 );
-    initial
-        pc = InstStartFrom;
+    initial pc = InstStartFrom;
 
     addr_t next_pc;
 

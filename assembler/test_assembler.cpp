@@ -9,10 +9,10 @@
 using namespace std;
 
 int main() {
+    auto addi_ = addi(Register::$t1, Register::$zero, 13);
+    cout << addi_.asm_code << endl << hex << addi_.compiled << endl;
     auto add_ = add(Register::$t0, Register::$t1, Register::$t2);
     cout << add_.asm_code << endl << add_.compiled << endl;
-    auto addi_ = addi(Register::$zero, Register::$t1, 13);
-    cout << addi_.asm_code << endl << addi_.compiled << endl;
 
     return 0;
 }

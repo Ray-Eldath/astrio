@@ -6,18 +6,19 @@
 #include "verilated.h"
 #include <vector>
 #include <iostream>
-#include <fstream>
 #include <cstdlib>
 #include "althas/config.h"
 
 #undef RESET_LINE_ENABLED
 
 #include "althas/althas.hpp"
+#include "assembler.hpp"
 
 struct Fetcher_TestCase {
-    const char name[20];
+    const char *name;
+    uint8_t cs;
     uint32_t addr;
-    uint32_t expected_inst;
+    uint32_t inst;
 };
 
 class Fetcher_Tester : public TESTER<Fetcher, Fetcher_TestCase> {
@@ -25,34 +26,49 @@ public:
     Fetcher_Tester(const std::string &testname, const std::vector<Fetcher_TestCase> &testcases) :
             TESTER(testname, testcases) {}
 
+    void beforeAll() override {
+        DUT->chip_select = 0;
+        DUT->load = 1;
+
+        for (auto testcase: d_testcases) {
+            DUT->addr = testcase.addr;
+            DUT->load_inst = testcase.inst;
+            tick();
+        }
+
+        DUT->chip_select = 1;
+        DUT->load = 0;
+    }
+
     void onEach(Fetcher_TestCase testcase, TPRINTER *t) override {
+        DUT->chip_select = testcase.cs;
         DUT->addr = testcase.addr;
     }
 
     void afterEach(Fetcher_TestCase testcase, TPRINTER *t) override {
         auto name = colorize(lrpad(testcase.name), ForegroundColor::BLACK, BackgroundColor::BLUE);
-        TASSERTF_INFO("%#-10x", DUT->inst, testcase.expected_inst, "%s  addr=%#x", name, testcase.addr);
+        TASSERTF_INFO("%#-10x", DUT->inst, testcase.inst,
+                      "%s  addr=%#x cs=%d", name, testcase.addr, testcase.cs);
     }
 };
 
-const int rate = 100;
 std::vector<Fetcher_TestCase> testcases;
 const uint32_t inst_start_from = Fetcher_Parameters::InstStartFrom;
+
+inline Fetcher_TestCase testcase(Instruction &inst, uint32_t addr) {
+    const char *name = inst.asm_code.c_str();
+    return Fetcher_TestCase{name, 1, addr, inst.compiled};
+}
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
-    std::ifstream fin("inst.data");
-    char line[8];
-    int lines = 0;
-    while (fin.getline(line, 9)) { // caveat: \n or \r\n is included
-        if (random() % 100 <= rate) {
-            auto testcase = Fetcher_TestCase{"read", lines + inst_start_from, (uint32_t) strtol(line, nullptr, 16)};
-//            printf("addr=%#-10x expected_inst=%#x\n", testcase.addr, testcase.expected_inst);
-            testcases.push_back(testcase);
-        }
-        lines += 1;
-    }
+    auto addi_ = addi(Register::$t1, Register::$zero, 13);
+    auto add_ = add(Register::$t0, Register::$t1, Register::$t2);
+    testcases.push_back(testcase(addi_, inst_start_from));
+    testcases.push_back(testcase(add_, inst_start_from + 4));
+    testcases.push_back(Fetcher_TestCase{"cs0", 0, inst_start_from + 8, 0});
+    testcases.push_back(Fetcher_TestCase{"cs0", 0, inst_start_from + 12, 0});
 
     auto fetcher = new Fetcher_Tester("fetcher", testcases);
     fetcher->run();

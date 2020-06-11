@@ -89,16 +89,20 @@ uint32_t I(uint8_t opcode, Register rs, Register rt, uint16_t immi) {
     return std::stoi(binary.str(), nullptr, 2);
 }
 
-Instruction add(Register rs, Register rt, Register rd) {
+Instruction add(Register rd, Register rs, Register rt) {
     std::stringstream ss;
     ss << "add " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rd);
     return Instruction{ss.str(), R(0, rs, rt, rd, 0, 0x20)};
 }
 
-inline Instruction addi(Register rs, Register rt, uint16_t immi) {
+Instruction addi(Register rt, Register rs, uint16_t immi) {
     std::stringstream ss;
     ss << "addi " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
     return Instruction{ss.str(), I(0x8, rs, rt, immi)};
+}
+
+Instruction nop() {
+    return Instruction{"nop", I(0, Register::$zero, Register::$zero, 0)};
 }
 
 #endif //ASTRIO_ASSEMBLER_HPP

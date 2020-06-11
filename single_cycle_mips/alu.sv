@@ -1,17 +1,15 @@
 import Types::*;
-import ALUType::cmd_t;
+import ALUType::alu_cmd_t;
 
 module ALU(
-    input ALUType::cmd_t cmd,
+    input ALUType::alu_cmd_t cmd,
     input op_t a,
     input op_t b,
-    input bit clk,
     output op_t out,
     output bit overflow,
     output bit zero
 );
     logic signed [32:0] out_e;
-    op_t next_out;
 
     assign zero = out == 0;
 
@@ -20,29 +18,26 @@ module ALU(
 
         unique case (cmd)
             ALUType::AND:
-                next_out = a & b;
+                out = a & b;
             ALUType::OR:
-                next_out = a | b;
+                out = a | b;
             ALUType::ADD: begin
                 out_e = {a[31], a}+{b[31], b};
-                next_out = out_e[31:0];
+                out = out_e[31:0];
                 overflow = out_e[32] ^ out_e[31];
             end
             ALUType::SUB: begin
                 out_e = {a[31], a}-{b[31], b};
-                next_out = out_e[31:0];
+                out = out_e[31:0];
                 overflow = out_e[32] ^ out_e[31];
             end
             ALUType::LESS_THAN:
-                next_out = {{31{1'b0}}, a < b};
+                out = {{31{1'b0}}, a < b};
             ALUType::XOR:
-                next_out = ~(a | b);
+                out = ~(a | b);
             default:
-                next_out = 0;
+                out = 0;
         endcase
     end
-
-    always_ff @(posedge clk)
-        out <= next_out;
 
 endmodule: ALU

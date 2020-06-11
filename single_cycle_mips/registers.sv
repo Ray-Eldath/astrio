@@ -19,15 +19,10 @@ module Registers(
         regs[29] = SPAt;
     end
 
-    assign next_read1_out = regs[read1];
-    assign next_read2_out = regs[read2];
-
-    always_ff @(posedge clk) begin
-        read1_out <= next_read1_out;
-        read2_out <= next_read2_out;
-    end
+    assign read1_out = regs[read1];
+    assign read2_out = regs[read2];
 
     always_ff @(negedge clk)
-        if (enable_write == 1)
+        if (enable_write == 1 && write_id != 0)
             regs[write_id] <= write_data;
 endmodule : Registers

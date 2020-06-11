@@ -9,6 +9,7 @@
 #include "althas/config.h"
 
 #undef RESET_LINE_ENABLED
+#undef CLOCK_LINE_ENABLED
 
 #include "althas/althas.hpp"
 
@@ -55,18 +56,18 @@ public:
     }
 };
 
-typedef ALU_ALUType::cmd_t cmd_t;
+typedef ALU_ALUType::alu_cmd_t cmd;
 std::vector<ALU_TestCase> testcases = {
-        ALU_TestCase{"and", cmd_t::AND, 0xFA, 0x1D, 0x18, 0, 0},
-        ALU_TestCase{"or", cmd_t::OR, 0x1A, 0x11, 0x1B, 0, 0},
-        ALU_TestCase{"add", cmd_t::ADD, 2, 3, 5, 0, 0},
-        ALU_TestCase{"add zero", cmd_t::ADD, 2, -2, 0, 0, 1},
-        ALU_TestCase{"sub", cmd_t::SUB, 2, 3, -1, 0, 0},
-        ALU_TestCase{"sub zero", cmd_t::SUB, 2, 2, 0, 0, 1},
-        ALU_TestCase{"overflow", cmd_t::ADD, INT32_MAX, 1, IGNORE_OUT, 1, 0},
-        ALU_TestCase{"overflow", cmd_t::ADD, INT32_MAX, 5, IGNORE_OUT, 1, 0},
-        ALU_TestCase{"underflow", cmd_t::SUB, INT32_MIN, 1, IGNORE_OUT, 1, 0},
-        ALU_TestCase{"underflow", cmd_t::SUB, INT32_MIN, 5, IGNORE_OUT, 1, 0},
+        ALU_TestCase{"and", cmd::AND, 0xFA, 0x1D, 0x18, 0, 0},
+        ALU_TestCase{"or", cmd::OR, 0x1A, 0x11, 0x1B, 0, 0},
+        ALU_TestCase{"add", cmd::ADD, 2, 3, 5, 0, 0},
+        ALU_TestCase{"add zero", cmd::ADD, 2, -2, 0, 0, 1},
+        ALU_TestCase{"sub", cmd::SUB, 2, 3, -1, 0, 0},
+        ALU_TestCase{"sub zero", cmd::SUB, 2, 2, 0, 0, 1},
+        ALU_TestCase{"overflow", cmd::ADD, INT32_MAX, 1, IGNORE_OUT, 1, 0},
+        ALU_TestCase{"overflow", cmd::ADD, INT32_MAX, 5, IGNORE_OUT, 1, 0},
+        ALU_TestCase{"underflow", cmd::SUB, INT32_MIN, 1, IGNORE_OUT, 1, 0},
+        ALU_TestCase{"underflow", cmd::SUB, INT32_MIN, 5, IGNORE_OUT, 1, 0},
 };
 
 int main(int argc, char **argv) {
