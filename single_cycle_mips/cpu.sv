@@ -44,13 +44,14 @@ module ExpMipsCPU(
     Memory mem_m(.addr(mem_addr), .enable_write(mem_write), .write_data(mem_write_data), .clk(clk), .read_out(mem_read_out));
 
     logic unsigned [2:0] opcode_lead;
+    logic unsigned [5:0] shamt;
 
     assign opcode = inst[31:26];
     assign funct = inst[5:0];
     assign opcode_lead = opcode[31:29];
 
     always_ff @(posedge clk) begin
-        pc_cmd <= PCType::INC;
+        pc_cmd = PCType::INC;
     end
 
     always_comb begin
@@ -66,8 +67,20 @@ module ExpMipsCPU(
             3'b001: begin // I
                 read1 = inst[25:21]; // rs
 
-                alu_a = {{16{inst[15]}}, inst[15:0]};
-                alu_b = read1_out;
+                unique case (funct)
+                    6'b00_1000: begin // add
+                        alu_a = read1_out;
+                        alu_b = {{16{inst[15]}}, inst[15:0]};
+                    end
+                    6'b00_1100, 6'b00_1101: begin // and, or
+                        alu_a = read1_out;
+                        alu_b = {{16{1'b0}}, inst[15:0]};
+                    end
+                    default: begin
+                        alu_a = read1_out;
+                        alu_b = {{16{inst[15]}}, inst[15:0]};
+                    end
+                endcase
 
                 reg_write = 1;
                 reg_write_id = inst[20:16]; // rt
@@ -79,8 +92,16 @@ module ExpMipsCPU(
                         read1 = inst[25:21]; // rs
                         read2 = inst[20:16]; // rt
 
-                        alu_a = read1_out;
-                        alu_b = read2_out;
+                        unique case (funct)
+                            6'b0, 6'b00_0010: begin // sll, srl
+                                alu_a = read2_out;
+                                alu_b = {{27{1'b0}}, inst[10:6]};
+                            end
+                            default: begin
+                                alu_a = read1_out;
+                                alu_b = read2_out;
+                            end
+                        endcase
 
                         reg_write = 1;
                         reg_write_id = inst[15:11]; // rd

@@ -9,7 +9,7 @@ module ALUController(
 
     always_comb
         unique case (opcode)
-            6'b0: begin
+            6'b0: begin // R
                 unique case (funct)
                     6'b10_0000: // add
                         alu_cmd_out = ALUType::ADD;
@@ -19,6 +19,10 @@ module ALUController(
                         alu_cmd_out = ALUType::AND;
                     6'b10_0101: // or
                         alu_cmd_out = ALUType::OR;
+                    6'b0: // sll
+                        alu_cmd_out = ALUType::SLL;
+                    6'b00_0010:  // srl
+                        alu_cmd_out = ALUType::SRL;
                     default:
                         alu_cmd_out = ALUType::NONE;
                 endcase

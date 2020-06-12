@@ -35,6 +35,10 @@ module ALU(
                 out = {{31{1'b0}}, a < b};
             ALUType::XOR:
                 out = ~(a | b);
+            ALUType::SLL:
+                out = a << b;
+            ALUType::SRL:
+                out = a >> b;
             default:
                 out = 0;
         endcase

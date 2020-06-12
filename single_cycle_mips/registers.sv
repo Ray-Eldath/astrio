@@ -22,7 +22,7 @@ module Registers(
     assign read1_out = regs[read1];
     assign read2_out = regs[read2];
 
-    always_ff @(negedge clk)
+    always_ff @(posedge clk)
         if (enable_write == 1 && write_id != 0)
             regs[write_id] <= write_data;
 endmodule : Registers

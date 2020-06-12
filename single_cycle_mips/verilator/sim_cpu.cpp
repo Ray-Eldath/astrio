@@ -32,7 +32,7 @@ public:
             std::cout << "current pc: " << DUT->ExpMipsCPU__DOT__pc << std::endl;
         }
 
-        printf("%s\n\n", colorize("all instructions uploaded.",
+        printf("%s\n\n", colorize("all instructions uploaded. selecting chip & resetting DUT.",
                                   ForegroundColor::UNSPECIFIED, BackgroundColor::UNSPECIFIED, Effect::UNDERLINE));
 
         DUT->ExpMipsCPU__DOT__loading_inst = 0;
@@ -78,6 +78,9 @@ std::vector<CPU_TestCase> testcases = {
         CPU_TestCase{add(Register::$t0, Register::$t1, Register::$t2)},
         CPU_TestCase{addi(Register::$t1, Register::$t1, 11)},
         CPU_TestCase{andi(Register::$t3, Register::$t1, 0xcdef)},
+        CPU_TestCase{sll(Register::$t3, Register::$t3, 4)},
+        CPU_TestCase{srl(Register::$t3, Register::$t3, 2)},
+        CPU_TestCase{srl(Register::$t4, Register::$t4, 2)},
         CPU_TestCase{nop()},
 };
 

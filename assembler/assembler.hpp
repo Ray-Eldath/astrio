@@ -136,8 +136,18 @@ inline Instruction move(Register rt, Register rs) { return ori(rt, rs, 0); }
 
 inline Instruction li(Register rt, uint16_t immi) { return ori(rt, Register::$zero, immi); }
 
-Instruction nop() {
-    return Instruction{"nop", I(0, Register::$zero, Register::$zero, 0)};
+inline Instruction nop() { return Instruction{"nop", I(0, Register::$zero, Register::$zero, 0)}; }
+
+Instruction sll(Register rd, Register rt, uint16_t shamt) {
+    std::stringstream ss;
+    ss << "sll " << nameOf(rd) << ", " << nameOf(rt) << ", " << shamt;
+    return Instruction{ss.str(), R(0x0, Register::$zero, rt, rd, shamt, 0x0)};
+}
+
+Instruction srl(Register rd, Register rt, uint16_t shamt) {
+    std::stringstream ss;
+    ss << "srl " << nameOf(rd) << ", " << nameOf(rt) << ", " << shamt;
+    return Instruction{ss.str(), R(0x0, Register::$zero, rt, rd, shamt, 0x2)};
 }
 
 #endif //ASTRIO_ASSEMBLER_HPP

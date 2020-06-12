@@ -60,6 +60,7 @@ std::vector<Registers_TestCase> testcases = {
         Registers_TestCase{"read1213", 12, 13, 0, 0, 0, 0xAF, 0xABCD},
         Registers_TestCase{"read12write13", 12, 0, 1, 13, 0x11, 0xAF, IGNORE_READ},
         Registers_TestCase{"read13", 0, 13, 0, 0, 0, IGNORE_READ, 0x11},
+        Registers_TestCase{"read0write0", 0, 0, 1, 0, 0x11, 0, 0},
 };
 
 int main(int argc, char **argv) {
