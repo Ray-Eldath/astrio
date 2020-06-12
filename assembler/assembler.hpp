@@ -52,10 +52,10 @@ private:
     std::vector<Instruction> insts;
     std::vector<PendingInstruction> pending_insts;
 
-    inline uint32_t compile_j(uint32_t addr) { return J(0x2, addr); }
+    inline uint32_t compile_j(uint32_t addr) { return J(0x2, addr >> 2); }
 
     inline void resolve_j(const PendingInstruction &inst) {
-        insts.insert(insts.begin() + (inst.addr - pc_start) / pc_inc + 1,
+        insts.insert(insts.begin() + (inst.addr - pc_start) / pc_inc - 1,
                      Instruction{inst.asm_code, inst.addr, compile_j(identifier_addr[inst.pending_identifier])});
     }
 

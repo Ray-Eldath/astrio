@@ -64,7 +64,7 @@ public:
         for (int i = 1; i < 28; ++i) {
             if (regs[i] != 0)
                 setColor(ForegroundColor::BLACK, BackgroundColor::UNSPECIFIED, Effect::BOLD);
-            printf("%s=%d ", nameOf((Register) i).c_str(), regs[i]);
+            printf("%s=%d ", AstrioAssembler::nameOf((Register) i).c_str(), regs[i]);
             resetColor();
         }
         t->decreaseIndent();
@@ -73,20 +73,27 @@ public:
     }
 };
 
-std::vector<CPU_TestCase> testcases = {
-        CPU_TestCase{li(Register::$t1, 13)},
-        CPU_TestCase{add(Register::$t0, Register::$t1, Register::$t2)},
-        CPU_TestCase{addi(Register::$t1, Register::$t1, 11)},
-        CPU_TestCase{andi(Register::$t3, Register::$t1, 0xcdef)},
-        CPU_TestCase{sll(Register::$t3, Register::$t3, 4)},
-        CPU_TestCase{srl(Register::$t3, Register::$t3, 2)},
-        CPU_TestCase{srl(Register::$t4, Register::$t4, 2)},
-        CPU_TestCase{nop()},
-};
+std::vector<Instruction> buildInsts(AstrioAssembler *astrio) {
+    astrio->li(Register::$t1, 13);
+    astrio->add(Register::$t0, Register::$t1, Register::$t2)
+            ->claim("dead_loop");
+    astrio->addi(Register::$t1, Register::$t1, 11);
+    astrio->andi(Register::$t3, Register::$t1, 0xcdef);
+    astrio->sll(Register::$t3, Register::$t3, 4);
+    astrio->srl(Register::$t3, Register::$t3, 2);
+    astrio->srl(Register::$t4, Register::$t4, 2);
+    astrio->j("dead_loop");
+    astrio->nop();
+
+    return astrio->assemble();
+}
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
+    std::vector<CPU_TestCase> testcases;
+    for (const auto &inst: buildInsts(new AstrioAssembler(CPU_Parameters::InstStartFrom)))
+        testcases.push_back(CPU_TestCase{inst});
     auto cpu = new CPU_Tester("astrio_scmips", testcases);
     cpu->run();
     delete cpu;
