@@ -43,8 +43,11 @@ module ExpMipsCPU(
     op_t mem_write_data, mem_read_out;
     Memory mem_m(.addr(mem_addr), .enable_write(mem_write), .write_data(mem_write_data), .clk(clk), .read_out(mem_read_out));
 
+    logic unsigned [2:0] opcode_lead;
+
     assign opcode = inst[31:26];
     assign funct = inst[5:0];
+    assign opcode_lead = opcode[31:29];
 
     always_ff @(posedge clk) begin
         pc_cmd <= PCType::INC;
@@ -59,20 +62,8 @@ module ExpMipsCPU(
         reg_write_id = 0;
         reg_write_data = 0;
 
-        unique case (opcode)
-            6'b0: begin // R
-                read1 = inst[25:21]; // rs
-                read2 = inst[20:16]; // rt
-
-                alu_a = read1_out;
-                alu_b = read2_out;
-
-                reg_write = 1;
-                reg_write_id = inst[15:11]; // rd
-                reg_write_data = alu_out;
-            end
-
-            6'b001000: begin // I: addi
+        unique case (opcode_lead)
+            3'b001: begin // I
                 read1 = inst[25:21]; // rs
 
                 alu_a = {{16{inst[15]}}, inst[15:0]};
@@ -82,10 +73,24 @@ module ExpMipsCPU(
                 reg_write_id = inst[20:16]; // rt
                 reg_write_data = alu_out;
             end
+            default:
+                unique case (opcode)
+                    6'b0: begin // R
+                        read1 = inst[25:21]; // rs
+                        read2 = inst[20:16]; // rt
 
-            default: begin
+                        alu_a = read1_out;
+                        alu_b = read2_out;
 
-            end
+                        reg_write = 1;
+                        reg_write_id = inst[15:11]; // rd
+                        reg_write_data = alu_out;
+                    end
+
+                    default: begin
+
+                    end
+                endcase
         endcase
     end
 

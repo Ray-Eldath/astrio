@@ -47,14 +47,26 @@ public:
 
         t->printIndent();
         setColor(ForegroundColor::BLACK, BackgroundColor::BLUE);
-        std::cout << " " << testcase.inst.asm_code << " ";
+        std::cout << " " << std::hex << DUT->ExpMipsCPU__DOT__pc << " ";
         resetColor();
-        std::cout << " " << std::hex << DUT->ExpMipsCPU__DOT__pc << std::endl;
+        std::cout << " ";
+        setColor(ForegroundColor::BLACK, BackgroundColor::UNSPECIFIED, Effect::BOLD);
+        std::cout << std::left << std::setfill(' ') << std::setw(25) << testcase.inst.asm_code;
+        resetColor();
+        std::cout << ": " << std::right << std::setfill('0') << std::setw(8) << testcase.inst.compiled << " | ";
+        setColor(ForegroundColor::CYAN);
+        std::cout <<
+                  "$gp=" << regs[28] << " $sp=" << regs[29] << " $fp=" << regs[30] << " $ra=" << regs[31] << std::endl;
+        resetColor();
 
         t->increaseIndent();
         t->printIndent();
-        for (int i = 0; i < 32; ++i)
+        for (int i = 1; i < 28; ++i) {
+            if (regs[i] != 0)
+                setColor(ForegroundColor::BLACK, BackgroundColor::UNSPECIFIED, Effect::BOLD);
             printf("%s=%d ", nameOf((Register) i).c_str(), regs[i]);
+            resetColor();
+        }
         t->decreaseIndent();
 
         printf("\n");
@@ -62,9 +74,11 @@ public:
 };
 
 std::vector<CPU_TestCase> testcases = {
-        CPU_TestCase{addi(Register::$t1, Register::$zero, 13)},
+        CPU_TestCase{li(Register::$t1, 13)},
         CPU_TestCase{add(Register::$t0, Register::$t1, Register::$t2)},
-        CPU_TestCase{nop()}
+        CPU_TestCase{addi(Register::$t1, Register::$t1, 11)},
+        CPU_TestCase{andi(Register::$t3, Register::$t1, 0xcdef)},
+        CPU_TestCase{nop()},
 };
 
 int main(int argc, char **argv) {

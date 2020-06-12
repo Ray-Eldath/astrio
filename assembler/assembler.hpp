@@ -7,6 +7,7 @@
 
 #include <bitset>
 #include <sstream>
+#include <iostream>
 
 enum class Register {
     $zero = 0,
@@ -91,7 +92,7 @@ uint32_t I(uint8_t opcode, Register rs, Register rt, uint16_t immi) {
 
 Instruction add(Register rd, Register rs, Register rt) {
     std::stringstream ss;
-    ss << "add " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rd);
+    ss << "add " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rt);
     return Instruction{ss.str(), R(0, rs, rt, rd, 0, 0x20)};
 }
 
@@ -100,6 +101,40 @@ Instruction addi(Register rt, Register rs, uint16_t immi) {
     ss << "addi " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
     return Instruction{ss.str(), I(0x8, rs, rt, immi)};
 }
+
+Instruction sub(Register rd, Register rs, Register rt) {
+    std::stringstream ss;
+    ss << "sub " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rd);
+    return Instruction{ss.str(), R(0, rs, rt, rd, 0, 0x22)};
+}
+
+Instruction and_(Register rd, Register rs, Register rt) {
+    std::stringstream ss;
+    ss << "and " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rd);
+    return Instruction{ss.str(), R(0, rs, rt, rd, 0, 0x24)};
+}
+
+Instruction andi(Register rt, Register rs, uint16_t immi) {
+    std::stringstream ss;
+    ss << "andi " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
+    return Instruction{ss.str(), I(0xc, rs, rt, immi)};
+}
+
+Instruction or_(Register rd, Register rs, Register rt) {
+    std::stringstream ss;
+    ss << "or " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rd);
+    return Instruction{ss.str(), R(0, rs, rt, rd, 0, 0x25)};
+}
+
+Instruction ori(Register rt, Register rs, uint16_t immi) {
+    std::stringstream ss;
+    ss << "ori " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
+    return Instruction{ss.str(), I(0xd, rs, rt, immi)};
+}
+
+inline Instruction move(Register rt, Register rs) { return ori(rt, rs, 0); }
+
+inline Instruction li(Register rt, uint16_t immi) { return ori(rt, Register::$zero, immi); }
 
 Instruction nop() {
     return Instruction{"nop", I(0, Register::$zero, Register::$zero, 0)};
