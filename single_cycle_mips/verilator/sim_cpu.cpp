@@ -38,6 +38,7 @@ public:
         DUT->ExpMipsCPU__DOT__loading_inst = 0;
         DUT->chip_select = 1;
         reset();
+        tick();
     }
 
     void onEach(CPU_TestCase testcase, TPRINTER *t) override {

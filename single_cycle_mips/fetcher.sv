@@ -13,11 +13,10 @@ module Fetcher(
 
     addr_t addr_shifted;
     assign addr_shifted = addr >> 2;
+    assign inst = chip_select == 0 ? 32'b0:insts[addr_shifted];
 
-    always_ff @(posedge clk) begin
-        inst <= chip_select == 0 ? 32'b0:insts[addr_shifted];
-
+    always_ff @(posedge clk)
         if (load == 1)
             insts[addr_shifted] <= load_inst;
-    end
+
 endmodule : Fetcher

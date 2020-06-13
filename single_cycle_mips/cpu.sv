@@ -15,12 +15,11 @@ module ExpMipsCPU(
 
     inst_t load_inst;
     bit loading_inst;
-    addr_t pc, pc_load_pc, next_pc;
+    addr_t pc, pc_load_pc;
     PCType::pc_cmd_t pc_cmd;
 
     PC pc_m(.cmd(pc_cmd), .load_pc(pc_load_pc), .rst(rst), .clk(clk), .pc(pc));
     Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst));
-    assign next_pc = pc+4;
 
     reg_id_t read1, read2, reg_write_id;
     bit reg_write;
@@ -51,10 +50,6 @@ module ExpMipsCPU(
     assign funct = inst[5:0];
     assign opcode_lead3 = opcode[31:29];
 
-    always_ff @(posedge clk) begin
-        pc_cmd = PCType::INC;
-    end
-
     always_comb begin
         alu_a = 0;
         alu_b = 0;
@@ -63,6 +58,8 @@ module ExpMipsCPU(
         reg_write = 0;
         reg_write_id = 0;
         reg_write_data = 0;
+        pc_cmd = PCType::INC;
+        pc_load_pc = 0;
 
         unique case (opcode_lead3)
             3'b001: begin // I: i
@@ -91,7 +88,10 @@ module ExpMipsCPU(
                 unique case (opcode)
                     6'b00_0010: begin // j
                         pc_cmd = PCType::LOAD;
-                        pc_load_pc = {next_pc[31:28], inst[25:0], 2'b0};
+                        alu_cmd = ALUType::SLL;
+                        alu_a = pc;
+                        alu_b = 2;
+                        pc_load_pc = {alu_out[31:28], inst[25:0], 2'b0};
                     end
                     6'b0: begin // R
                         read1 = inst[25:21]; // rs
