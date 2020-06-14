@@ -7,18 +7,20 @@ module PC(
     input addr_t load_pc,
     input bit rst,
     input bit clk,
-    output addr_t pc
+    output addr_t pc,
+    output addr_t inc_pc
 );
     initial pc = InstStartFrom;
 
     addr_t next_pc;
 
+    assign inc_pc = pc+4;
     always_comb begin
         unique case (cmd)
             PCType::NONE:
                 next_pc = pc;
             PCType::INC:
-                next_pc = pc+4;
+                next_pc = inc_pc;
             PCType::LOAD:
                 next_pc = load_pc;
             default:

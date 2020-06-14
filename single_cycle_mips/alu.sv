@@ -31,8 +31,10 @@ module ALU(
                 out = out_e[31:0];
                 overflow = out_e[32] ^ out_e[31];
             end
-            ALUType::LESS_THAN:
+            ALUType::LESS_THAN: // a < b -> 1
                 out = {{31{1'b0}}, a < b};
+            ALUType::EQUAL: // a == b -> 1
+                out = {{31{1'b0}}, a == b};
             ALUType::XOR:
                 out = ~(a | b);
             ALUType::SLL:

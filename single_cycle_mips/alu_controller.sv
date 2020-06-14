@@ -23,6 +23,8 @@ module ALUController(
                         alu_cmd_out = ALUType::SLL;
                     6'b00_0010:  // srl
                         alu_cmd_out = ALUType::SRL;
+                    6'b10_1010: // slt
+                        alu_cmd_out = ALUType::LESS_THAN;
                     default:
                         alu_cmd_out = ALUType::NONE;
                 endcase
@@ -33,6 +35,10 @@ module ALUController(
                 alu_cmd_out = ALUType::AND;
             6'b00_1101:   // I: ori
                 alu_cmd_out = ALUType::OR;
+            6'b00_1010:   // I: slti
+                alu_cmd_out = ALUType::LESS_THAN;
+            6'b00_0100, 6'b00_0101:  // I: beq, bne
+                alu_cmd_out = ALUType::EQUAL;
             default:
                 alu_cmd_out = ALUType::NONE;
         endcase

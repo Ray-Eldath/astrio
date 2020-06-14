@@ -75,16 +75,17 @@ public:
 };
 
 std::vector<Instruction> buildInsts(AstrioAssembler *astrio) {
-    astrio->li(Register::$t1, 13);
-    astrio->add(Register::$t0, Register::$t1, Register::$t2)
-            ->claim("dead_loop");
-    astrio->addi(Register::$t1, Register::$t1, 11);
-    astrio->andi(Register::$t3, Register::$t1, 0xcdef);
-    astrio->sll(Register::$t3, Register::$t3, 4);
-    astrio->srl(Register::$t3, Register::$t3, 2);
-    astrio->srl(Register::$t4, Register::$t4, 2);
-    astrio->j("dead_loop");
-    astrio->nop();
+    astrio  // sum 1 to 5
+            ->li(Register::$t1, 1)
+            ->li(Register::$s1, 0)
+            ->claim_next("loop")
+            ->add(Register::$s1, Register::$t1, Register::$s1)
+            ->addi(Register::$t1, Register::$t1, 1)
+            ->slti(Register::$t2, Register::$t1, 6)
+            ->bne(Register::$t2, Register::$zero, "loop");
+
+    for (int i = 0; i < 20; i++)
+        astrio->nop();
 
     return astrio->assemble();
 }

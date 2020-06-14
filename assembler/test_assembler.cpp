@@ -17,18 +17,14 @@ void print(const Instruction &inst) {
 int main() {
     auto astrio = new AstrioAssembler(0x400000 - 0x4);
 
-    astrio->add(Register::$t0, Register::$t1, Register::$t2)
-            ->claim("abc");
-    astrio->li(Register::$t1, 13); // $t1 = 13
-    astrio->add(Register::$t0, Register::$t1, Register::$t2); // $t0 = 13
-    astrio->addi(Register::$t1, Register::$t1, 11); // $t1 = 24
-    astrio->andi(Register::$t3, Register::$t1, 0xcdef); // $t3 = 8
-    astrio->sll(Register::$t3, Register::$t3, 4); // $t3 = 128
-    astrio->j("dead_loop");
-    astrio->srl(Register::$t3, Register::$t3, 2); // $t3 = 32
-    astrio->srl(Register::$t4, Register::$t4, 2)
-            ->claim("dead_loop"); // $t4 = 0
-    astrio->j("abc");
+    astrio  // sum 1 to 5
+            ->li(Register::$t1, 1)
+            ->li(Register::$s1, 0)
+            ->claim_next("loop")
+            ->add(Register::$s1, Register::$t1, Register::$s1)
+            ->addi(Register::$t1, Register::$t1, 1)
+            ->slti(Register::$t2, Register::$t1, 6)
+            ->bne(Register::$t2, Register::$zero, "loop");
 
     for (const auto &inst: astrio->assemble())
         print(inst);
