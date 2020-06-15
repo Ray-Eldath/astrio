@@ -11,15 +11,18 @@
 #include <algorithm>
 #include <iostream>
 
-struct CPU_TestCase {
-    const Instruction inst;
-};
+using namespace std;
 
 auto disassembler = new AstrioDisassembler(0x4);
 
-class CPU_Tester : public TESTER<CPU, CPU_TestCase> {
+class CPU_InstsTester : public TESTER<CPU, Instruction> {
+private:
+    const bool show_upload_status_;
 public:
-    CPU_Tester(const std::string &testname, const std::vector<CPU_TestCase> &testcases) : TESTER(testname, testcases) {}
+    CPU_InstsTester(const std::string &testname,
+                    const std::vector<Instruction> &insts,
+                    const bool show_upload_status = false) :
+            TESTER(testname, insts), show_upload_status_(show_upload_status) {}
 
     void beforeStart() override {
         DUT->ExpMipsCPU__DOT__loading_inst = 1;
@@ -27,13 +30,14 @@ public:
 
         tick();
         for (const auto &testcase: d_testcases) {
-            DUT->ExpMipsCPU__DOT__load_inst = testcase.inst.compiled;
+            DUT->ExpMipsCPU__DOT__load_inst = testcase.compiled;
             tick();
-
-//            auto compiled = testcase.inst.compiled;
-//            std::cout << "inst " << std::hex << compiled << " "
-//                      << disassembler->disassemble(testcase.inst.addr, compiled) << " uploaded to DUT" << std::endl;
-//            std::cout << "current pc: " << DUT->ExpMipsCPU__DOT__pc << std::endl;
+            if (show_upload_status_) {
+                auto compiled = testcase.compiled;
+                cout << "inst " << hex << compiled << " "
+                     << disassembler->disassemble(testcase.addr, compiled) << " uploaded to DUT" << endl;
+                cout << "current pc: " << DUT->ExpMipsCPU__DOT__pc << std::endl;
+            }
         }
 
         printf("%s\n\n", colorize("all instructions uploaded. selecting chip & resetting DUT.",
@@ -45,24 +49,24 @@ public:
         tick();
     }
 
-    void onEach(CPU_TestCase testcase, TPRINTER *t) override {
+    void onEach(Instruction testcase, TPRINTER *t) override {
         auto regs_p = DUT->ExpMipsCPU__DOT__registers_m__DOT__regs;
         uint32_t pc = DUT->ExpMipsCPU__DOT__pc, inst = DUT->ExpMipsCPU__DOT__inst;
         uint32_t regs[32];
-        std::copy(regs_p, regs_p + 32, regs);
+        copy(regs_p, regs_p + 32, regs);
 
         t->printIndent();
         setColor(ForegroundColor::BLACK, BackgroundColor::BLUE);
-        std::cout << " " << std::hex << pc << " ";
+        cout << " " << std::hex << pc << " ";
         resetColor();
-        std::cout << " ";
+        cout << " ";
         setColor(ForegroundColor::BLACK, BackgroundColor::UNSPECIFIED, Effect::BOLD);
-        std::cout << std::left << std::setfill(' ') << std::setw(25) << disassembler->disassemble(pc, inst);
+        cout << left << setfill(' ') << setw(25) << disassembler->disassemble(pc, inst);
         resetColor();
-        std::cout << ": " << std::right << std::setfill('0') << std::setw(8) << inst << " | ";
+        cout << ": " << right << setfill('0') << setw(8) << inst << " | ";
         setColor(ForegroundColor::CYAN);
-        std::cout <<
-                  "$gp=" << regs[28] << " $sp=" << regs[29] << " $fp=" << regs[30] << " $ra=" << regs[31] << std::endl;
+        cout <<
+             "$gp=" << regs[28] << " $sp=" << regs[29] << " $fp=" << regs[30] << " $ra=" << regs[31] << endl;
         resetColor();
 
         t->increaseIndent();
@@ -79,7 +83,18 @@ public:
     }
 };
 
-std::vector<Instruction> buildInsts(AstrioAssembler *astrio) {
+inline CPU_InstsTester *buildTestCase(const string &name,
+                                      AstrioAssembler *insts,
+                                      int spin_off = 0,
+                                      bool show_upload_status = false) {
+    for (int i = 0; i < spin_off; i++)
+        insts->nop();
+    return new CPU_InstsTester("astrio_scmips_" + name, insts->assemble(), show_upload_status);
+}
+
+CPU_InstsTester *test_loop_sum() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
     astrio  // sum 1 to 5
             ->li(Register::$t1, 1)
             ->li(Register::$s1, 0)
@@ -88,14 +103,25 @@ std::vector<Instruction> buildInsts(AstrioAssembler *astrio) {
             ->slti(Register::$t2, Register::$t1, 6)
             ->bne(Register::$t2, Register::$zero, "loop");
 
-    astrio->nop()->nop()->nop();
+    return buildTestCase("loop_sum", astrio);
+}
 
-//    astrio->addi(Register::$sp, Register::$sp, -4)
-//            ->sw(Register::$s1, Register::$sp, 0)
-//            ->li(Register::$s1, 0)
-//            ->lw(Register::$s1, Register::$sp, 0);
+CPU_InstsTester *test_lw_sw() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
 
     astrio
+            ->addi(Register::$sp, Register::$sp, -4)
+            ->sw(Register::$s1, Register::$sp, 0)
+            ->li(Register::$s1, 0)
+            ->lw(Register::$s1, Register::$sp, 0);
+
+    return buildTestCase("lw_sw", astrio);
+}
+
+CPU_InstsTester *test_recursive_fib() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio  // fib
             ->li(Register::$a0, 1)
             ->li(Register::$a1, 1)
             ->li(Register::$a2, 5) // n-th of fib
@@ -126,21 +152,21 @@ std::vector<Instruction> buildInsts(AstrioAssembler *astrio) {
             ->jr(Register::$ra)
             ->claim("exit")->nop();
 
-    for (int i = 0; i < 100; i++)
-        astrio->nop();
-
-    return astrio->assemble();
+    return buildTestCase("recursive_fib", astrio, 75);
 }
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
-    std::vector<CPU_TestCase> testcases;
-    for (const auto &inst: buildInsts(new AstrioAssembler(CPU_Parameters::InstStartFrom)))
-        testcases.push_back(CPU_TestCase{inst});
-    auto cpu = new CPU_Tester("astrio_scmips", testcases);
-    cpu->run();
-    delete cpu;
+    auto loop_sum = test_loop_sum();
+    loop_sum->run();
+    auto lw_sw = test_lw_sw();
+    lw_sw->run();
+    auto recursive_fib = test_recursive_fib();
+    recursive_fib->run();
+    delete loop_sum;
+    delete lw_sw;
+    delete recursive_fib;
 
     exit(EXIT_SUCCESS);
 }

@@ -166,10 +166,6 @@ public:
                 abort();
             }
 
-            for (const auto &pair : identifier_addr) {
-                std::cout << std::hex << pair.first << " at " << pair.second << std::endl;
-            }
-
             if (pending_inst.type == ResolvableInstruction::J)
                 resolve_j<ResolvableInstruction::J>(pending_inst);
             else if (pending_inst.type == ResolvableInstruction::JAL)
