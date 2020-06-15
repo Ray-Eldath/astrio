@@ -13,7 +13,7 @@
 
 #define IGNORE_OUT 0x1234
 
-struct Storage_TestCase {
+struct Memory_TestCase {
     const char name[10];
     uint32_t addr;
     uint8_t enable_write;
@@ -21,15 +21,15 @@ struct Storage_TestCase {
     uint32_t expected_out;
 };
 
-class Storage_Tester : public TESTER<Memory, Storage_TestCase> {
+class Memory_Tester : public TESTER<Memory, Memory_TestCase> {
 public:
-    void onEach(Storage_TestCase testcase, TPRINTER *t) override {
+    void onEach(Memory_TestCase testcase, TPRINTER *t) override {
         DUT->addr = testcase.addr;
         DUT->enable_write = testcase.enable_write;
         DUT->write_data = testcase.write_data;
     }
 
-    void afterEach(Storage_TestCase testcase, TPRINTER *t) override {
+    void afterEach(Memory_TestCase testcase, TPRINTER *t) override {
         auto name = colorize(lrpad(testcase.name), ForegroundColor::BLACK, BackgroundColor::BLUE);
         if (testcase.expected_out == IGNORE_OUT) {
             t->TPRINTF("%s  enable_write=%d  write_data=%#-10x\n", name, testcase.enable_write, testcase.write_data);
@@ -39,25 +39,23 @@ public:
                       "%s  enable_write=%d  write_data=%#-10x", name, testcase.enable_write, testcase.write_data);
     }
 
-    Storage_Tester(const std::string &testname, const std::vector<Storage_TestCase> &testcases) :
+    Memory_Tester(const std::string &testname, const std::vector<Memory_TestCase> &testcases) :
             TESTER(testname, testcases) {}
 };
 
-uint32_t mem_start = Memory_Parameters::MemStartFrom;
-uint32_t mem_space = Memory_Parameters::MemSpace;
-std::vector<Storage_TestCase> testcases = {
-        Storage_TestCase{"write", mem_start + 1, 1, 0x213, IGNORE_OUT},
-        Storage_TestCase{"read", mem_start + 1, 0, 0, 0x213},
-        Storage_TestCase{"write", mem_start + mem_space, 1, 0x1103, IGNORE_OUT},
-        Storage_TestCase{"read", mem_start + mem_space, 0, 0, 0x1103},
+std::vector<Memory_TestCase> testcases = {
+        Memory_TestCase{"write", Memory_Parameters::GPAt, 1, 0x213, IGNORE_OUT},
+        Memory_TestCase{"read", Memory_Parameters::GPAt, 0, 0, 0x213},
+        Memory_TestCase{"write", Memory_Parameters::SPAt, 1, 0x1103, IGNORE_OUT},
+        Memory_TestCase{"read", Memory_Parameters::SPAt, 0, 0, 0x1103},
 };
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
-    auto storage = new Storage_Tester("storage", testcases);
-    storage->run();
-    delete storage;
+    auto memory = new Memory_Tester("memory", testcases);
+    memory->run();
+    delete memory;
 
     exit(EXIT_SUCCESS);
 }

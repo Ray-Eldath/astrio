@@ -39,6 +39,8 @@ module ALUController(
                 alu_cmd_out = ALUType::LESS_THAN;
             6'b00_0100, 6'b00_0101:  // I: beq, bne
                 alu_cmd_out = ALUType::EQUAL;
+            6'b10_0011, 6'b10_1011:  // I: lw, sw
+                alu_cmd_out = ALUType::ADD;
             default:
                 alu_cmd_out = ALUType::NONE;
         endcase

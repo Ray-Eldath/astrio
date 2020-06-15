@@ -22,12 +22,12 @@ module ExpMipsCPU(
     Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst));
 
     reg_id_t read1, read2, reg_write_id;
-    bit reg_write;
+    bit reg_write_enable;
     op_t reg_write_data, read1_out, read2_out;
 
     Registers registers_m(
         .read1(read1), .read2(read2),
-        .enable_write(reg_write), .write_id(reg_write_id), .write_data(reg_write_data),
+        .enable_write(reg_write_enable), .write_id(reg_write_id), .write_data(reg_write_data),
         .read1_out(read1_out), .read2_out(read2_out),
         .clk(clk));
 
@@ -39,9 +39,9 @@ module ExpMipsCPU(
     ALU alu_m(.cmd(alu_cmd), .a(alu_a), .b(alu_b), .out(alu_out), .overflow(alu_overflow), .zero(alu_zero));
 
     addr_t mem_addr;
-    bit mem_write;
+    bit mem_write_enable;
     op_t mem_write_data, mem_read_out;
-    Memory mem_m(.addr(mem_addr), .enable_write(mem_write), .write_data(mem_write_data), .clk(clk), .read_out(mem_read_out));
+    Memory mem_m(.addr(mem_addr), .enable_write(mem_write_enable), .write_data(mem_write_data), .clk(clk), .read_out(mem_read_out));
 
     logic unsigned [2:0] opcode_lead3;
     logic unsigned [5:0] shamt;
@@ -55,11 +55,14 @@ module ExpMipsCPU(
         alu_b = 0;
         read1 = 0;
         read2 = 0;
-        reg_write = 0;
+        reg_write_enable = 0;
         reg_write_id = 0;
         reg_write_data = 0;
         pc_cmd = PCType::INC;
         load_pc = 0;
+        mem_write_enable = 0;
+        mem_addr = 0;
+        mem_write_data = 0;
 
         unique case (opcode_lead3)
             3'b001: begin // I: i
@@ -76,7 +79,7 @@ module ExpMipsCPU(
                     end
                 endcase
 
-                reg_write = 1;
+                reg_write_enable = 1;
                 reg_write_id = inst[20:16]; // rt
                 reg_write_data = alu_out;
             end
@@ -89,7 +92,7 @@ module ExpMipsCPU(
                         load_pc = {alu_out[31:28], inst[25:0], 2'b0};
 
                         if (opcode == 6'b00_0011) begin // jal
-                            reg_write = 1;
+                            reg_write_enable = 1;
                             reg_write_id = 5'd31; // $ra
                             reg_write_data = inc_pc;
                         end
@@ -100,17 +103,12 @@ module ExpMipsCPU(
                         alu_a = read1_out;
                         alu_b = read2_out;
 
-                        if (opcode == 6'b00_0100) begin // beq
-                            if (alu_out == 1) begin
-                                pc_cmd = PCType::LOAD;
-                                load_pc = inc_pc+{{14{inst[15]}}, inst[15:0], 2'b0};
-                            end
-                        end
-                        else if (opcode == 6'b00_0101) begin // bne
-                            if (alu_out == 0) begin
-                                pc_cmd = PCType::LOAD;
-                                load_pc = inc_pc+{{14{inst[15]}}, inst[15:0], 2'b0};
-                            end
+                        if (opcode == 6'b00_0100 && alu_out == 1) begin // beq
+                            pc_cmd = PCType::INC_OFFSET;
+                            load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
+                        end else if (opcode == 6'b00_0101 && alu_out == 0) begin // bne
+                            pc_cmd = PCType::INC_OFFSET;
+                            load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
                         end
                     end
                     6'b0: begin // R
@@ -133,19 +131,35 @@ module ExpMipsCPU(
                         endcase
 
                         if (alu_cmd != ALUType::NONE) begin
-                            reg_write = 1;
+                            reg_write_enable = 1;
                             reg_write_id = inst[15:11]; // rd
                             reg_write_data = alu_out;
                         end
                     end
-                    default: begin
-
-                    end
+                    default: begin end
                 endcase
             end
-            default: begin
+            3'b100, 3'b101: begin // lX, sX
+                read1 = inst[25:21]; // rs
+                alu_a = read1_out;
+                alu_b = {{16{inst[15]}}, inst[15:0]};
+                mem_addr = alu_out;
 
+                unique case (opcode)
+                    6'b10_0011: begin // lw
+                        reg_write_enable = 1;
+                        reg_write_id = inst[20:16]; // rt
+                        reg_write_data = mem_read_out;
+                    end
+                    6'b10_1011: begin // sw
+                        read2 = inst[20:16]; // rt
+                        mem_write_enable = 1;
+                        mem_write_data = read2_out;
+                    end
+                    default: begin end
+                endcase
             end
+            default: begin end
         endcase
     end
 

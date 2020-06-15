@@ -8,12 +8,16 @@ module Memory(
     input bit clk,
     output op_t read_out
 );
-    op_reg_t mem [MemStartFrom+MemSpace:MemStartFrom];
+    op_reg_t static_mem [MemStaticStartFrom+MemStaticSpace:MemStaticStartFrom];
+    op_reg_t dynamic_mem [MemDynamicStartFrom+MemDynamicSpace:MemDynamicStartFrom];
 
-    always_ff @(posedge clk) begin
+    assign read_out = addr >= MemDynamicStartFrom ? dynamic_mem[addr]:static_mem[addr];
+
+    always_ff @(posedge clk)
         if (enable_write)
-            mem[addr] <= write_data;
-        else
-            read_out <= mem[addr];
-    end
-endmodule : Memory
+            if (addr >= MemDynamicStartFrom)
+                dynamic_mem[addr] <= write_data;
+            else
+                static_mem[addr] <= write_data;
+
+endmodule: Memory

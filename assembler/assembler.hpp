@@ -27,43 +27,77 @@ enum class Register {
     $ra = 31
 };
 
+static std::string nameOf(Register reg) {
+    const int id = static_cast<int>(reg);
+
+    std::stringstream ss;
+
+    if (id == 0)
+        return "$zero";
+    else if (id == 1)
+        return "$at";
+    else if (id == 2 || id == 3)
+        ss << "$v" << id - 2;
+    else if (id >= 4 && id <= 7)
+        ss << "$a" << id - 4;
+    else if (id >= 8 && id <= 15)
+        ss << "$t" << id - 8;
+    else if (id >= 16 && id <= 23)
+        ss << "$s" << id - 16;
+    else if (id == 24 || id == 25)
+        ss << "$t" << id - 16;
+    else if (id == 26 || id == 27)
+        ss << "$v" << id - 26;
+    else if (id == 28)
+        return "$gp";
+    else if (id == 29)
+        return "$sp";
+    else if (id == 30)
+        return "$fp";
+    else if (id == 31)
+        return "$ra";
+
+    return ss.str();
+}
+
 enum class ResolvableInstruction {
     J, JAL, BEQ, BNE
 };
 
 struct Instruction {
-    std::string asm_code;
     uint32_t addr;
     uint32_t compiled;
 };
 
 struct PendingInstruction {
     ResolvableInstruction type;
-    std::string asm_code, pending_identifier;
+    std::string pending_identifier;
     uint32_t addr;
     Register rs = Register::$zero, rt = Register::$zero;
 };
 
 class AstrioAssembler {
 private:
-    uint32_t pc, pc_start;
-    const uint32_t pc_inc;
-    const Instruction NOP = Instruction{"nop", pc, I(0, Register::$zero, Register::$zero, 0)};
+    uint32_t pc;
+    const uint32_t pc_start, pc_inc;
     std::map<std::string, uint32_t> identifier_addr;
     std::vector<Instruction> insts;
     std::vector<PendingInstruction> pending_insts;
 
     inline uint32_t compile_j(uint32_t addr) { return J(0x2, addr >> 2); }
 
-    inline uint32_t compile_jal(uint32_t addr) { return J(0x3, addr >> 2); }
+    inline uint32_t compile_jal(uint32_t addr) { return J(0x3, (addr + pc_inc) >> 2); }
 
-    inline uint32_t compile_beq(Register rs, Register rt, uint32_t addr) { return I(0x4, rs, rt, (addr - pc) >> 2); }
+    inline uint32_t compile_beq(Register rs, Register rt, int32_t addr, int32_t that_pc) {
+        return I(0x4, rs, rt, (addr - that_pc) >> 2);
+    }
 
-    inline uint32_t compile_bne(Register rs, Register rt, uint32_t addr) { return I(0x5, rs, rt, (addr - pc) >> 2); }
+    inline uint32_t compile_bne(Register rs, Register rt, int32_t addr, int32_t that_pc) {
+        return I(0x5, rs, rt, (addr - that_pc) >> 2);
+    }
 
     template<ResolvableInstruction inst_type>
-    inline void
-    resolve_j(const PendingInstruction &inst) {
+    inline void resolve_j(const PendingInstruction &inst) {
         uint32_t compiled;
         uint32_t addr = identifier_addr[inst.pending_identifier];
 
@@ -72,12 +106,11 @@ private:
         else if constexpr(inst_type == ResolvableInstruction::JAL)
             compiled = compile_jal(addr);
         else if constexpr(inst_type == ResolvableInstruction::BEQ)
-            compiled = compile_beq(inst.rs, inst.rt, addr);
+            compiled = compile_beq(inst.rs, inst.rt, addr, inst.addr);
         else if constexpr(inst_type == ResolvableInstruction::BNE)
-            compiled = compile_bne(inst.rs, inst.rt, addr);
+            compiled = compile_bne(inst.rs, inst.rt, addr, inst.addr);
 
-        insts.insert(insts.begin() + (inst.addr - pc_start) / pc_inc - 1,
-                     Instruction{inst.asm_code, inst.addr, compiled});
+        insts.insert(insts.begin() + (inst.addr - pc_start) / pc_inc - 1, Instruction{inst.addr, compiled});
     }
 
     // region private
@@ -97,10 +130,10 @@ private:
         binary << toBinary<5>(shamt);
         binary << toBinary<6>(funct);
 
-        return std::stoi(binary.str(), nullptr, 2);
+        return std::stol(binary.str(), nullptr, 2);
     }
 
-    uint32_t I(uint8_t opcode, Register rs, Register rt, uint16_t immi) {
+    uint32_t I(uint8_t opcode, Register rs, Register rt, int32_t immi) {
         std::stringstream binary;
 
         binary << toBinary<6>(opcode);
@@ -108,7 +141,7 @@ private:
         binary << toBinary<5>((uint32_t) rt);
         binary << toBinary<16>(immi);
 
-        return std::stoi(binary.str(), nullptr, 2);
+        return std::stol(binary.str(), nullptr, 2);
     }
 
     uint32_t J(uint8_t opcode, uint32_t addr) {
@@ -117,46 +150,13 @@ private:
         binary << toBinary<6>(opcode);
         binary << toBinary<26>(addr);
 
-        return std::stoi(binary.str(), nullptr, 2);
+        return std::stol(binary.str(), nullptr, 2);
     }
     // endregion
 
 public:
-    explicit AstrioAssembler(uint32_t inst_start, uint32_t inst_inc = 4) :
+    explicit AstrioAssembler(uint32_t inst_start, const uint32_t inst_inc = 0x4) :
             pc(inst_start), pc_start(inst_start), pc_inc(inst_inc) {}
-
-    static std::string nameOf(Register reg) {
-        const int id = static_cast<int>(reg);
-
-        std::stringstream ss;
-
-        if (id == 0)
-            return "$zero";
-        else if (id == 1)
-            return "$at";
-        else if (id == 2 || id == 3)
-            ss << "$v" << id - 2;
-        else if (id >= 4 && id <= 7)
-            ss << "$a" << id - 4;
-        else if (id >= 8 && id <= 15)
-            ss << "$t" << id - 8;
-        else if (id >= 16 && id <= 23)
-            ss << "$s" << id - 16;
-        else if (id == 24 || id == 25)
-            ss << "$t" << id - 16;
-        else if (id == 26 || id == 27)
-            ss << "$v" << id - 26;
-        else if (id == 28)
-            return "$gp";
-        else if (id == 29)
-            return "$sp";
-        else if (id == 30)
-            return "$fp";
-        else if (id == 31)
-            return "$ra";
-
-        return ss.str();
-    }
 
     std::vector<Instruction> assemble() {
         for (const auto &pending_inst : pending_insts) {
@@ -164,6 +164,10 @@ public:
             if (identifier_addr.find(s) == identifier_addr.end()) {
                 fprintf(stderr, "unexpected EOL but %s still undefined.", s.c_str());
                 abort();
+            }
+
+            for (const auto &pair : identifier_addr) {
+                std::cout << std::hex << pair.first << " at " << pair.second << std::endl;
             }
 
             if (pending_inst.type == ResolvableInstruction::J)
@@ -179,64 +183,50 @@ public:
         return insts;
     }
 
-    AstrioAssembler *claim_next(const std::string &identifier) {
+    AstrioAssembler *claim(const std::string &identifier) {
         identifier_addr.insert(std::pair(identifier, pc));
         return this;
     }
 
     AstrioAssembler *add(Register rd, Register rs, Register rt) {
         incPC();
-        std::stringstream ss;
-        ss << "add " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rt);
-        insts.push_back(Instruction{ss.str(), pc, R(0, rs, rt, rd, 0, 0x20)});
+        insts.push_back(Instruction{pc, R(0, rs, rt, rd, 0, 0x20)});
         return this;
     }
 
     AstrioAssembler *addi(Register rt, Register rs, uint16_t immi) {
         incPC();
-        std::stringstream ss;
-        ss << "addi " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
-        insts.push_back(Instruction{ss.str(), pc, I(0x8, rs, rt, immi)});
+        insts.push_back(Instruction{pc, I(0x8, rs, rt, immi)});
         return this;
     }
 
     AstrioAssembler *sub(Register rd, Register rs, Register rt) {
         incPC();
-        std::stringstream ss;
-        ss << "sub " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rt);
-        insts.push_back(Instruction{ss.str(), pc, R(0, rs, rt, rd, 0, 0x22)});
+        insts.push_back(Instruction{pc, R(0, rs, rt, rd, 0, 0x22)});
         return this;
     }
 
     AstrioAssembler *and_(Register rd, Register rs, Register rt) {
         incPC();
-        std::stringstream ss;
-        ss << "and " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rt);
-        insts.push_back(Instruction{ss.str(), pc, R(0, rs, rt, rd, 0, 0x24)});
+        insts.push_back(Instruction{pc, R(0, rs, rt, rd, 0, 0x24)});
         return this;
     }
 
     AstrioAssembler *andi(Register rt, Register rs, uint16_t immi) {
         incPC();
-        std::stringstream ss;
-        ss << "andi " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
-        insts.push_back(Instruction{ss.str(), pc, I(0xc, rs, rt, immi)});
+        insts.push_back(Instruction{pc, I(0xc, rs, rt, immi)});
         return this;
     }
 
     AstrioAssembler *or_(Register rd, Register rs, Register rt) {
         incPC();
-        std::stringstream ss;
-        ss << "or " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rt);
-        insts.push_back(Instruction{ss.str(), pc, R(0, rs, rt, rd, 0, 0x25)});
+        insts.push_back(Instruction{pc, R(0, rs, rt, rd, 0, 0x25)});
         return this;
     }
 
     AstrioAssembler *ori(Register rt, Register rs, uint16_t immi) {
         incPC();
-        std::stringstream ss;
-        ss << "ori " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
-        insts.push_back(Instruction{ss.str(), pc, I(0xd, rs, rt, immi)});
+        insts.push_back(Instruction{pc, I(0xd, rs, rt, immi)});
         return this;
     }
 
@@ -246,54 +236,44 @@ public:
 
     AstrioAssembler *slt(Register rd, Register rs, Register rt) {
         incPC();
-        std::stringstream ss;
-        ss << "slt " << nameOf(rd) << ", " << nameOf(rs) << ", " << nameOf(rt);
-        insts.push_back(Instruction{ss.str(), pc, R(0, rs, rt, rd, 0, 0x2a)});
+        insts.push_back(Instruction{pc, R(0, rs, rt, rd, 0, 0x2a)});
         return this;
     }
 
     AstrioAssembler *slti(Register rt, Register rs, uint16_t immi) {
         incPC();
-        std::stringstream ss;
-        ss << "slti " << nameOf(rt) << ", " << nameOf(rs) << ", " << immi;
-        insts.push_back(Instruction{ss.str(), pc, I(0xa, rs, rt, immi)});
+        insts.push_back(Instruction{pc, I(0xa, rs, rt, immi)});
         return this;
     }
 
     AstrioAssembler *jr(Register rs) {
         incPC();
-        std::stringstream ss;
-        ss << "jr " << nameOf(rs);
-        insts.push_back(Instruction{ss.str(), pc, R(0, rs, Register::$zero, Register::$zero, 0, 0x8)});
+        insts.push_back(Instruction{pc, R(0, rs, Register::$zero, Register::$zero, 0, 0x8)});
         return this;
     }
 
     AstrioAssembler *nop() {
         incPC();
-        insts.push_back(NOP);
+        insts.push_back(Instruction{pc, 0});
         return this;
     }
 
     AstrioAssembler *sll(Register rd, Register rt, uint16_t shamt) {
         incPC();
-        std::stringstream ss;
-        ss << "sll " << nameOf(rd) << ", " << nameOf(rt) << ", " << shamt;
-        insts.push_back(Instruction{ss.str(), pc, R(0x0, Register::$zero, rt, rd, shamt, 0x0)});
+        insts.push_back(Instruction{pc, R(0x0, Register::$zero, rt, rd, shamt, 0x0)});
         return this;
     }
 
     AstrioAssembler *srl(Register rd, Register rt, uint16_t shamt) {
         incPC();
-        std::stringstream ss;
-        ss << "srl " << nameOf(rd) << ", " << nameOf(rt) << ", " << shamt;
-        insts.push_back(Instruction{ss.str(), pc, R(0x0, Register::$zero, rt, rd, shamt, 0x2)});
+        insts.push_back(Instruction{pc, R(0x0, Register::$zero, rt, rd, shamt, 0x2)});
         return this;
     }
 
     AstrioAssembler *j(const std::string &identifier) {
         if (identifier_addr.find(identifier) == identifier_addr.end()) {
             incPC();
-            pending_insts.push_back(PendingInstruction{ResolvableInstruction::J, "j " + identifier, identifier, pc});
+            pending_insts.push_back(PendingInstruction{ResolvableInstruction::J, identifier, pc});
             return this;
         } else
             return j(identifier_addr[identifier]);
@@ -301,17 +281,14 @@ public:
 
     AstrioAssembler *j(uint32_t addr) {
         incPC();
-        std::stringstream ss;
-        ss << "j " << std::hex << addr;
-        insts.push_back(Instruction{ss.str(), pc, compile_j(addr)});
+        insts.push_back(Instruction{pc, compile_j(addr)});
         return this;
     }
 
     AstrioAssembler *jal(const std::string &identifier) {
         if (identifier_addr.find(identifier) == identifier_addr.end()) {
             incPC();
-            pending_insts.push_back(
-                    PendingInstruction{ResolvableInstruction::JAL, "jal " + identifier, identifier, pc});
+            pending_insts.push_back(PendingInstruction{ResolvableInstruction::JAL, identifier, pc});
             return this;
         } else
             return jal(identifier_addr[identifier]);
@@ -319,18 +296,14 @@ public:
 
     AstrioAssembler *jal(uint32_t addr) {
         incPC();
-        std::stringstream ss;
-        ss << "jal " << std::hex << addr;
-        insts.push_back(Instruction{ss.str(), pc, compile_jal(addr)});
+        insts.push_back(Instruction{pc, compile_jal(addr)});
         return this;
     }
 
     AstrioAssembler *beq(Register rs, Register rt, const std::string &identifier) {
         if (identifier_addr.find(identifier) == identifier_addr.end()) {
             incPC();
-            std::stringstream ss;
-            ss << "beq " << nameOf(rs) << ", " << nameOf(rt) << ", " << identifier;
-            pending_insts.push_back(PendingInstruction{ResolvableInstruction::BEQ, ss.str(), identifier, pc, rs, rt});
+            pending_insts.push_back(PendingInstruction{ResolvableInstruction::BEQ, identifier, pc, rs, rt});
             return this;
         } else
             return beq(rs, rt, identifier_addr[identifier]);
@@ -338,18 +311,14 @@ public:
 
     AstrioAssembler *beq(Register rs, Register rt, uint32_t addr) {
         incPC();
-        std::stringstream ss;
-        ss << "beq " << nameOf(rs) << ", " << nameOf(rt) << ", " << addr;
-        insts.push_back(Instruction{ss.str(), pc, compile_beq(rs, rt, addr)});
+        insts.push_back(Instruction{pc, compile_beq(rs, rt, addr, pc)});
         return this;
     }
 
     AstrioAssembler *bne(Register rs, Register rt, const std::string &identifier) {
         if (identifier_addr.find(identifier) == identifier_addr.end()) {
             incPC();
-            std::stringstream ss;
-            ss << "bne " << nameOf(rs) << ", " << nameOf(rt) << ", " << identifier;
-            pending_insts.push_back(PendingInstruction{ResolvableInstruction::BNE, ss.str(), identifier, pc, rs, rt});
+            pending_insts.push_back(PendingInstruction{ResolvableInstruction::BNE, identifier, pc, rs, rt});
             return this;
         } else
             return bne(rs, rt, identifier_addr[identifier]);
@@ -357,9 +326,19 @@ public:
 
     AstrioAssembler *bne(Register rs, Register rt, uint32_t addr) {
         incPC();
-        std::stringstream ss;
-        ss << "bne " << nameOf(rs) << ", " << nameOf(rt) << ", " << addr;
-        insts.push_back(Instruction{ss.str(), pc, compile_bne(rs, rt, addr)});
+        insts.push_back(Instruction{pc, compile_bne(rs, rt, addr, pc)});
+        return this;
+    }
+
+    AstrioAssembler *lw(Register rt, Register rs, uint16_t offset) {
+        incPC();
+        insts.push_back(Instruction{pc, I(0x23, rs, rt, offset)});
+        return this;
+    }
+
+    AstrioAssembler *sw(Register rt, Register rs, uint16_t offset) {
+        incPC();
+        insts.push_back(Instruction{pc, I(0x2b, rs, rt, offset)});
         return this;
     }
 };

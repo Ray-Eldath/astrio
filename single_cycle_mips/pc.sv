@@ -21,6 +21,8 @@ module PC(
                 next_pc = pc;
             PCType::INC:
                 next_pc = inc_pc;
+            PCType::INC_OFFSET:
+                next_pc = inc_pc+load_pc;
             PCType::LOAD:
                 next_pc = load_pc;
             default:
