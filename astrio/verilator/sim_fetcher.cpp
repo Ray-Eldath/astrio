@@ -13,6 +13,7 @@
 
 #include "althas/althas.hpp"
 #include "assembler.hpp"
+#include "disassembler.hpp"
 
 struct Fetcher_TestCase {
     std::string name;
@@ -55,9 +56,10 @@ public:
 
 std::vector<Fetcher_TestCase> testcases;
 const uint32_t inst_start_from = Fetcher_Parameters::InstStartFrom;
+const auto disassembler = new AstrioDisassembler(0x4);
 
 inline Fetcher_TestCase testcase(Instruction &inst, uint32_t addr) {
-    auto name = inst.asm_code;
+    auto name = disassembler->disassemble(addr, inst.compiled);
     return Fetcher_TestCase{name, 1, addr, inst.compiled};
 }
 

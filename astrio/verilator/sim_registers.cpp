@@ -35,9 +35,9 @@ public:
 
     void afterEach(Registers_TestCase testcase, TPRINTER *t) override {
         t->printIndent();
-        auto name = lrpad(colorize(testcase.name, ForegroundColor::BLACK, BackgroundColor::BLUE));
-        printf("%s  read1=%-4d read2=%-4d enable_write=%-4d write_id= %-4d write_data=%-#8X\n",
-               name, testcase.read1, testcase.read2, testcase.enable_write, testcase.write_id, testcase.write_data);
+        printf("%s %s %s  read1=%-4d read2=%-4d enable_write=%-4d write_id= %-4d write_data=%-#8X\n",
+               color(ForegroundColor::BLACK, BackgroundColor::BLUE), testcase.name, RESET_COLOR,
+               testcase.read1, testcase.read2, testcase.enable_write, testcase.write_id, testcase.write_data);
         t->increaseIndent();
 
         if (testcase.expected_read1_out != IGNORE_READ)

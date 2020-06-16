@@ -65,8 +65,7 @@ public:
         resetColor();
         cout << ": " << right << setfill('0') << setw(8) << inst << " | ";
         setColor(ForegroundColor::CYAN);
-        cout <<
-             "$gp=" << regs[28] << " $sp=" << regs[29] << " $fp=" << regs[30] << " $ra=" << regs[31] << endl;
+        cout << "$gp=" << regs[28] << " $sp=" << regs[29] << " $fp=" << regs[30] << " $ra=" << regs[31] << endl;
         resetColor();
 
         t->increaseIndent();
@@ -89,7 +88,7 @@ inline CPU_InstsTester *buildTestCase(const string &name,
                                       bool show_upload_status = false) {
     for (int i = 0; i < spin_off; i++)
         insts->nop();
-    return new CPU_InstsTester("astrio_scmips_" + name, insts->assemble(), show_upload_status);
+    return new CPU_InstsTester("astrio_" + name, insts->assemble(), show_upload_status);
 }
 
 CPU_InstsTester *test_loop_sum() {
@@ -103,7 +102,7 @@ CPU_InstsTester *test_loop_sum() {
             ->slti(Register::$t2, Register::$t1, 6)
             ->bne(Register::$t2, Register::$zero, "loop");
 
-    return buildTestCase("loop_sum", astrio);
+    return buildTestCase("loop_sum", astrio, 20);
 }
 
 CPU_InstsTester *test_lw_sw() {
