@@ -43,12 +43,10 @@ module ExpMipsCPU(
     op_t mem_write_data, mem_read_out;
     Memory mem_m(.addr(mem_addr), .enable_write(mem_write_enable), .write_data(mem_write_data), .clk(clk), .read_out(mem_read_out));
 
-    logic unsigned [2:0] opcode_lead3;
     logic unsigned [5:0] shamt;
 
     assign opcode = inst[31:26];
     assign funct = inst[5:0];
-    assign opcode_lead3 = opcode[31:29];
 
     always_comb begin
         alu_a = 0;
@@ -64,8 +62,8 @@ module ExpMipsCPU(
         mem_addr = 0;
         mem_write_data = 0;
 
-        unique case (opcode_lead3)
-            3'b001: begin // I: i
+        unique casez (opcode)
+            6'b001_???: begin // I: i
                 read1 = inst[25:21]; // rs
 
                 unique case (funct)
@@ -83,7 +81,7 @@ module ExpMipsCPU(
                 reg_write_id = inst[20:16]; // rt
                 reg_write_data = alu_out;
             end
-            3'b000: begin
+            6'b000_???: begin
                 unique case (opcode)
                     6'b00_0010, 6'b00_0011: begin // j, jal
                         pc_cmd = PCType::LOAD;
@@ -139,7 +137,7 @@ module ExpMipsCPU(
                     default: begin end
                 endcase
             end
-            3'b100, 3'b101: begin // lX, sX
+            6'b10?_???: begin // lX, sX
                 read1 = inst[25:21]; // rs
                 alu_a = read1_out;
                 alu_b = {{16{inst[15]}}, inst[15:0]};
