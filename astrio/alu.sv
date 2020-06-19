@@ -6,12 +6,9 @@ module ALU(
     input op_t a,
     input op_t b,
     output op_t out,
-    output bit overflow,
-    output bit zero
+    output bit overflow
 );
     logic signed [32:0] out_e;
-
-    assign zero = out == 0;
 
     always_comb begin
         overflow = 0;

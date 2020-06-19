@@ -21,7 +21,6 @@ struct ALU_TestCase {
     int64_t b;
     int32_t expected_out;
     uint8_t expected_overflow;
-    uint8_t expected_zero;
 };
 
 class ALU_Tester : public TESTER<ALU, ALU_TestCase> {
@@ -48,7 +47,6 @@ public:
         t->increaseIndent();
 
         TASSERTF_INFO("%d", DUT->overflow, testcase.expected_overflow, "overflow=%d", DUT->overflow);
-        TASSERTF_INFO("%d", DUT->zero, testcase.expected_zero, "zero=%d", DUT->zero);
         if (testcase.expected_out != IGNORE_OUT)
             TASSERTF_INFO("%#-10X", DUT->out, (uint32_t) testcase.expected_out, "out=%#-10X", DUT->out);
 
@@ -58,18 +56,18 @@ public:
 
 typedef ALU_ALUType::alu_cmd_t cmd;
 std::vector<ALU_TestCase> testcases = {
-        ALU_TestCase{"and", cmd::AND, 0xFA, 0x1D, 0x18, 0, 0},
-        ALU_TestCase{"or", cmd::OR, 0x1A, 0x11, 0x1B, 0, 0},
-        ALU_TestCase{"sll", cmd::SLL, 0x1234ABCD, 4, 0x234ABCD0, 0, 0},
-        ALU_TestCase{"srl", cmd::SRL, 0xABCD, 3, 0x000ABCD, 0, 0},
-        ALU_TestCase{"add", cmd::ADD, 2, 3, 5, 0, 0},
-        ALU_TestCase{"add zero", cmd::ADD, 2, -2, 0, 0, 1},
-        ALU_TestCase{"sub", cmd::SUB, 2, 3, -1, 0, 0},
-        ALU_TestCase{"sub zero", cmd::SUB, 2, 2, 0, 0, 1},
-        ALU_TestCase{"overflow", cmd::ADD, INT32_MAX, 1, IGNORE_OUT, 1, 0},
-        ALU_TestCase{"overflow", cmd::ADD, INT32_MAX, 5, IGNORE_OUT, 1, 0},
-        ALU_TestCase{"underflow", cmd::SUB, INT32_MIN, 1, IGNORE_OUT, 1, 0},
-        ALU_TestCase{"underflow", cmd::SUB, INT32_MIN, 5, IGNORE_OUT, 1, 0},
+        ALU_TestCase{"and", cmd::AND, 0xFA, 0x1D, 0x18, 0},
+        ALU_TestCase{"or", cmd::OR, 0x1A, 0x11, 0x1B, 0},
+        ALU_TestCase{"sll", cmd::SLL, 0x1234ABCD, 4, 0x234ABCD0, 0},
+        ALU_TestCase{"srl", cmd::SRL, 0xABCD, 3, 0x000ABCD, 0},
+        ALU_TestCase{"add", cmd::ADD, 2, 3, 5, 0},
+        ALU_TestCase{"add zero", cmd::ADD, 2, -2, 0, 0},
+        ALU_TestCase{"sub", cmd::SUB, 2, 3, -1, 0},
+        ALU_TestCase{"sub zero", cmd::SUB, 2, 2, 0, 0},
+        ALU_TestCase{"overflow", cmd::ADD, INT32_MAX, 1, IGNORE_OUT, 1},
+        ALU_TestCase{"overflow", cmd::ADD, INT32_MAX, 5, IGNORE_OUT, 1},
+        ALU_TestCase{"underflow", cmd::SUB, INT32_MIN, 1, IGNORE_OUT, 1},
+        ALU_TestCase{"underflow", cmd::SUB, INT32_MIN, 5, IGNORE_OUT, 1},
 };
 
 int main(int argc, char **argv) {

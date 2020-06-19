@@ -154,18 +154,36 @@ CPU_InstsTester *test_recursive_fib() {
     return buildTestCase("recursive_fib", astrio, 75);
 }
 
+CPU_InstsTester *test_debug() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio
+            ->addi(Register::$t1, Register::$zero, 1)
+            ->addi(Register::$t2, Register::$zero, 2)
+            ->addi(Register::$t3, Register::$zero, 3)
+            ->addi(Register::$t4, Register::$zero, 4)
+            ->addi(Register::$t5, Register::$zero, 5)
+            ->add(Register::$t1, Register::$t1, Register::$t1);
+
+    return buildTestCase("debug", astrio, 10);
+}
+
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
-    auto loop_sum = test_loop_sum();
-    loop_sum->run();
-    auto lw_sw = test_lw_sw();
-    lw_sw->run();
-    auto recursive_fib = test_recursive_fib();
-    recursive_fib->run();
-    delete loop_sum;
-    delete lw_sw;
-    delete recursive_fib;
+//    auto loop_sum = test_loop_sum();
+//    loop_sum->run();
+//    auto lw_sw = test_lw_sw();
+//    lw_sw->run();
+//    auto recursive_fib = test_recursive_fib();
+//    recursive_fib->run();
+    auto debug = test_debug();
+    debug->run();
+
+//    delete loop_sum;
+//    delete lw_sw;
+//    delete recursive_fib;
+    delete debug;
 
     exit(EXIT_SUCCESS);
 }

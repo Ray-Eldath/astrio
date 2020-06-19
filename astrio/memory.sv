@@ -8,8 +8,8 @@ module Memory(
     input bit clk,
     output op_t read_out
 );
-    op_reg_t static_mem [MemStaticStartFrom+MemStaticSpace:MemStaticStartFrom];
-    op_reg_t dynamic_mem [MemDynamicStartFrom+MemDynamicSpace:MemDynamicStartFrom];
+    op_t static_mem [MemStaticStartFrom+MemStaticSpace:MemStaticStartFrom];
+    op_t dynamic_mem [MemDynamicStartFrom+MemDynamicSpace:MemDynamicStartFrom];
 
     assign read_out = addr >= MemDynamicStartFrom ? dynamic_mem[addr]:static_mem[addr];
 

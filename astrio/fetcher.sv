@@ -9,7 +9,7 @@ module Fetcher(
     input bit clk,
     output inst_t inst
 );
-    inst_reg_t insts [(InstStartFrom+InstSpace-1)>>2:InstStartFrom>>2];
+    inst_t insts [(InstStartFrom+InstSpace-1)>>2:InstStartFrom>>2];
 
     addr_t addr_shifted;
     assign addr_shifted = addr >> 2;

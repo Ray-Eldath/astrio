@@ -11,7 +11,7 @@ module Registers(
     output op_t read1_out,
     output op_t read2_out
 );
-    op_reg_t regs [31:0];
+    op_t regs [31:0];
     op_t next_read1_out, next_read2_out;
 
     initial begin
