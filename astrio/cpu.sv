@@ -33,11 +33,14 @@ module ExpMipsCPU(
 
     // reg
     bit reg_write_enable, reg_write_enable__, reg_write_enable_s2, reg_write_enable_s3, reg_write_enable_s4;
-    op_t reg_write_data, reg_write_data__, reg_write_data_s3, reg_write_data_s4;
+    op_t reg_write_data, reg_write_data__, reg_write_data_s2, reg_write_data_s3, reg_write_data_s4;
     reg_id_t reg_write_id, reg_write_id__, reg_write_id_s2, reg_write_id_s3, reg_write_id_s4;
+    bit reg_write_passthrough, reg_write_passthrough_s2;
+    op_t reg_write_data_pt, reg_write_data_pt_s2;
 
     op_t read1_out, read2_out;
     reg_id_t read1, read2;
+    bit read1_eq_read2;
 
     // mem
     addr_t mem_addr, mem_addr__, mem_addr_s3;
@@ -62,7 +65,7 @@ module ExpMipsCPU(
     Memory mem_m(.addr(mem_addr__), .enable_write(mem_write_enable__), .write_data(mem_write_data__), .read_out(mem_read_out), .clk(clk));
 
 
-    logic unsigned [5:0] shamt;
+    assign read1_eq_read2 = read1_out == read2_out;
 
     always_comb begin
         opcode = inst[31:26];
@@ -78,6 +81,8 @@ module ExpMipsCPU(
         reg_write_enable = 0;
         reg_write_id = 0;
         reg_write_data = 0;
+        reg_write_passthrough = 0;
+        reg_write_data_pt = 0;
         mem_write_enable = 0;
         mem_write_data = 0;
         pc_cmd = PCType::INC;
@@ -103,32 +108,31 @@ module ExpMipsCPU(
             end
             6'b000_???: begin
                 unique case (opcode)
-                    // 6'b00_0010, 6'b00_0011: begin // j, jal
-                    //     pc_cmd = PCType::LOAD;
-                    //     alu_a = pc;
-                    //     alu_b = 2;
-                    //     load_pc = {alu_out[31:28], inst[25:0], 2'b0};
-                    //
-                    //     if (opcode == 6'b00_0011) begin // jal
-                    //         reg_write_enable = 1;
-                    //         reg_write_id = 5'd31; // $ra
-                    //         reg_write_data = inc_pc;
-                    //     end
-                    // end
-                    // 6'b00_0100, 6'b00_0101: begin // beq, bne
-                    //     read1 = inst[25:21]; // rs
-                    //     read2 = inst[20:16]; // rt
-                    //     alu_a = read1_out;
-                    //     alu_b = read2_out;
-                    //
-                    //     if (opcode == 6'b00_0100 && alu_out == 1) begin // beq
-                    //         pc_cmd = PCType::INC_OFFSET;
-                    //         load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
-                    //     end else if (opcode == 6'b00_0101 && alu_out == 0) begin // bne
-                    //         pc_cmd = PCType::INC_OFFSET;
-                    //         load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
-                    //     end
-                    // end
+                    6'b00_0010, 6'b00_0011: begin // j, jal
+                        pc_cmd = PCType::LOAD;
+                        alu_a = pc;
+                        alu_b = 2;
+                        load_pc = {alu_out[31:28], inst[25:0], 2'b0};
+
+                        if (opcode == 6'b00_0011) begin // jal
+                            reg_write_passthrough = 1;
+                            reg_write_data_pt = inc_pc;
+                            reg_write_enable = 1;
+                            reg_write_id = 5'd31; // $ra
+                        end
+                    end
+                    6'b00_0100, 6'b00_0101: begin // beq, bne
+                        read1 = inst[25:21]; // rs
+                        read2 = inst[20:16]; // rt
+
+                        if (opcode == 6'b00_0100 && read1_eq_read2 == 1) begin // beq
+                            pc_cmd = PCType::INC_OFFSET;
+                            load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
+                        end else if (opcode == 6'b00_0101 && read1_eq_read2 == 0) begin // bne
+                            pc_cmd = PCType::INC_OFFSET;
+                            load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
+                        end
+                    end
                     6'b0: begin // R
                         read1 = inst[25:21]; // rs
                         read2 = inst[20:16]; // rt
@@ -141,7 +145,6 @@ module ExpMipsCPU(
                             6'b00_1000: begin // jr
                                 pc_cmd = PCType::LOAD;
                                 load_pc = read1_out; // rs
-                                // TODO: clear
                             end
                             default: begin // add, sub, and, or, slt
                                 alu_a = read1_out;
@@ -186,6 +189,8 @@ module ExpMipsCPU(
 
         alu_a_s2 <= alu_a;
         alu_b_s2 <= alu_b;
+        reg_write_passthrough_s2 <= reg_write_passthrough;
+        reg_write_data_pt_s2 <= reg_write_data_pt;
         reg_write_enable_s2 <= reg_write_enable;
         reg_write_id_s2 <= reg_write_id;
         mem_write_enable_s2 <= mem_write_enable;
@@ -213,7 +218,7 @@ module ExpMipsCPU(
     end
 
     always_ff @(posedge clk) begin
-        reg_write_data_s3 <= reg_write_data;
+        reg_write_data_s3 <= reg_write_passthrough_s2 ? reg_write_data_pt_s2:reg_write_data;
         mem_addr_s3 <= mem_addr;
 
         // s2 -> s3

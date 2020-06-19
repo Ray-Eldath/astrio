@@ -158,7 +158,7 @@ CPU_InstsTester *test_debug() {
     auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
 
     astrio
-            ->addi(Register::$t1, Register::$zero, 1)
+            ->claim("nonsense")->addi(Register::$t1, Register::$zero, 1)
             ->addi(Register::$t2, Register::$zero, 2)
             ->addi(Register::$t3, Register::$zero, 3)
             ->addi(Register::$t4, Register::$zero, 4)
@@ -169,7 +169,8 @@ CPU_InstsTester *test_debug() {
             ->nop()
             ->nop()
             ->nop()
-            ->nop()
+            ->beq(Register::$t1, Register::$t2, "nonsense")
+            ->jal("nonsense")
             ->lw(Register::$t6, Register::$gp, 0);
 
     return buildTestCase("debug", astrio, 10);
