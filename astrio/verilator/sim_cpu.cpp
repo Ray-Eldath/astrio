@@ -163,7 +163,14 @@ CPU_InstsTester *test_debug() {
             ->addi(Register::$t3, Register::$zero, 3)
             ->addi(Register::$t4, Register::$zero, 4)
             ->addi(Register::$t5, Register::$zero, 5)
-            ->add(Register::$t1, Register::$t1, Register::$t1);
+            ->sw(Register::$t1, Register::$gp, 0)
+            ->add(Register::$t1, Register::$t1, Register::$t1)
+            ->nop()
+            ->nop()
+            ->nop()
+            ->nop()
+            ->nop()
+            ->lw(Register::$t6, Register::$gp, 0);
 
     return buildTestCase("debug", astrio, 10);
 }
