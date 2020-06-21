@@ -2,6 +2,7 @@ import Types::*;
 import CPUType::*;
 import ALUType::*;
 import PCType::*;
+import Mux3Type::*;
 
 module ExpMipsCPU(
     input bit clk,
@@ -47,6 +48,13 @@ module ExpMipsCPU(
     bit mem_write_enable, mem_write_enable__, mem_write_enable_s2, mem_write_enable_s3;
     op_t mem_write_data, mem_write_data__, mem_write_data_s2, mem_write_data_s3;
     op_t mem_read_out;
+
+    // bypassing
+    //
+    // ALU
+    Mux3Type::cmd_t alu_a_mux_cmd, alu_b_mux_cmd;
+    OpMux3 alu_a_mux(.default_line(alu_a_s2), .top_line(reg_write_data_s4), .bottom_line(reg_write_data_s3), .cmd(alu_a_mux_cmd), .out(alu_a__));
+    OpMux3 alu_b_mux(.default_line(alu_b_s2), .top_line(reg_write_data_s4), .bottom_line(reg_write_data_s3), .cmd(alu_b_mux_cmd), .out(alu_b__));
 
 
     PC pc_m(.cmd(pc_cmd), .load_pc(load_pc), .rst(rst), .inc_pc(inc_pc), .pc(pc), .clk(clk));
@@ -202,8 +210,8 @@ module ExpMipsCPU(
         mem_addr = 0;
         reg_write_data = 0;
 
-        alu_a__ = alu_a_s2;
-        alu_b__ = alu_b_s2;
+        alu_a_mux_cmd = Mux3Type::DEFAULT;
+        alu_b_mux_cmd = Mux3Type::DEFAULT;
 
         unique casez (opcode_s2)
             6'b001_???: // I: i
