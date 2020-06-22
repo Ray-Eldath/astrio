@@ -25,33 +25,33 @@ public:
             TESTER(testname, insts), show_upload_status_(show_upload_status) {}
 
     void beforeStart() override {
-        DUT->ExpMipsCPU__DOT__loading_inst = 1;
+        DUT->Astrio__DOT__loading_inst = 1;
         DUT->chip_select = 0;
 
         tick();
         for (const auto &testcase: d_testcases) {
-            DUT->ExpMipsCPU__DOT__load_inst = testcase.compiled;
+            DUT->Astrio__DOT__load_inst = testcase.compiled;
             tick();
             if (show_upload_status_) {
                 auto compiled = testcase.compiled;
                 cout << "inst " << hex << compiled << " "
                      << disassembler->disassemble(testcase.addr, compiled) << " uploaded to DUT" << endl;
-                cout << "current pc: " << DUT->ExpMipsCPU__DOT__pc << std::endl;
+                cout << "current pc: " << DUT->Astrio__DOT__pc << std::endl;
             }
         }
 
         printf("%s\n\n", colorize("all instructions uploaded. selecting chip & resetting DUT.",
                                   ForegroundColor::UNSPECIFIED, BackgroundColor::UNSPECIFIED, Effect::UNDERLINE));
 
-        DUT->ExpMipsCPU__DOT__loading_inst = 0;
+        DUT->Astrio__DOT__loading_inst = 0;
         DUT->chip_select = 1;
         reset();
         tick();
     }
 
     void onEach(Instruction testcase, TPRINTER *t) override {
-        auto regs_p = DUT->ExpMipsCPU__DOT__registers_m__DOT__regs;
-        uint32_t pc = DUT->ExpMipsCPU__DOT__pc, inst = DUT->ExpMipsCPU__DOT__inst;
+        auto regs_p = DUT->Astrio__DOT__registers_m__DOT__regs;
+        uint32_t pc = DUT->Astrio__DOT__pc, inst = DUT->Astrio__DOT__inst;
         uint32_t regs[32];
         copy(regs_p, regs_p + 32, regs);
 

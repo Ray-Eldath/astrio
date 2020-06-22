@@ -4,7 +4,7 @@ import ALUType::*;
 import PCType::*;
 import Mux3Type::*;
 
-module ExpMipsCPU(
+module Astrio(
     input bit clk,
     input bit rst,
     input bit chip_select
@@ -286,4 +286,4 @@ module ExpMipsCPU(
         reg_write_id__ = reg_write_id_s4;
         reg_write_data__ = reg_write_data_s4;
     end
-endmodule : ExpMipsCPU
+endmodule : Astrio
