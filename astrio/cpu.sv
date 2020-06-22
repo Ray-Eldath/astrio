@@ -281,9 +281,9 @@ module ExpMipsCPU(
     end
 
     // s4: WB
-    always_ff @(posedge clk) begin
-        reg_write_enable__ <= reg_write_enable_s4;
-        reg_write_id__ <= reg_write_id_s4;
-        reg_write_data__ <= reg_write_data_s4;
+    always_comb begin
+        reg_write_enable__ = reg_write_enable_s4;
+        reg_write_id__ = reg_write_id_s4;
+        reg_write_data__ = reg_write_data_s4;
     end
 endmodule : ExpMipsCPU

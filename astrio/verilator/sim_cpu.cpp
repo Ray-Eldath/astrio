@@ -176,6 +176,19 @@ CPU_InstsTester *test_debug() {
     return buildTestCase("debug", astrio, 10);
 }
 
+CPU_InstsTester *test_debug_bypassing() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio
+            ->li(Register::$t1, 10)
+            ->li(Register::$t2, 5)
+            ->add(Register::$t3, Register::$t1, Register::$t2) // 1b, 2a
+            ->add(Register::$s1, Register::$t3, Register::$t1) // 1a
+            ->add(Register::$s2, Register::$t1, Register::$t3); // 2b
+
+    return buildTestCase("debug_bypassing", astrio, 5);
+}
+
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
@@ -187,11 +200,14 @@ int main(int argc, char **argv) {
 //    recursive_fib->run();
     auto debug = test_debug();
     debug->run();
+    auto debug_bypassing = test_debug_bypassing();
+    debug_bypassing->run();
 
 //    delete loop_sum;
 //    delete lw_sw;
 //    delete recursive_fib;
     delete debug;
+    delete debug_bypassing;
 
     exit(EXIT_SUCCESS);
 }

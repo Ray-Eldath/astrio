@@ -12,17 +12,16 @@ module Registers(
     output op_t read2_out
 );
     op_t regs [31:0];
-    op_t next_read1_out, next_read2_out;
 
     initial begin
         regs[28] = GPAt;
         regs[29] = SPAt;
     end
 
-    assign read1_out = regs[read1];
-    assign read2_out = regs[read2];
-
     always_ff @(posedge clk)
         if (enable_write == 1 && write_id != 0)
             regs[write_id] <= write_data;
+
+    assign read1_out = (enable_write && write_id == read1 && write_id != 0) ? write_data:regs[read1];
+    assign read2_out = (enable_write && write_id == read2 && write_id != 0) ? write_data:regs[read2];
 endmodule : Registers
