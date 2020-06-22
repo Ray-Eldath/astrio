@@ -79,7 +79,7 @@ private:
         std::stringstream ss;
         if (inst.funct == "100000")
             ss << "add " << inst.rd << ", " << inst.rs << ", " << inst.rt;
-        else if (inst.funct == "100011")
+        else if (inst.funct == "100010")
             ss << "sub " << inst.rd << ", " << inst.rs << ", " << inst.rt;
         else if (inst.funct == "100100")
             ss << "and " << inst.rd << ", " << inst.rs << ", " << inst.rt;

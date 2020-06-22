@@ -12,8 +12,8 @@ module ExpMipsCPU(
 
 
     // IF/ID
-    inst_t inst;
-    addr_t inc_pc;
+    inst_t inst, inst__;
+    addr_t inc_pc, inc_pc__;
 
     // PC
     PCType::pc_cmd_t pc_cmd;
@@ -40,7 +40,8 @@ module ExpMipsCPU(
     op_t reg_write_data_pt, reg_write_data_pt_s2;
 
     op_t read1_out, read2_out;
-    reg_id_t read1, read2;
+    reg_id_t read1, read1_s2;
+    reg_id_t read2, read2_s2; // pass to s2 for hazard detection & bypassing
     bit read1_eq_read2;
 
     // mem
@@ -53,13 +54,13 @@ module ExpMipsCPU(
     //
     // ALU
     Mux3Type::cmd_t alu_a_mux_cmd, alu_b_mux_cmd;
-    OpMux3 alu_a_mux(.default_line(alu_a_s2), .top_line(reg_write_data_s4), .bottom_line(reg_write_data_s3), .cmd(alu_a_mux_cmd), .out(alu_a__));
-    OpMux3 alu_b_mux(.default_line(alu_b_s2), .top_line(reg_write_data_s4), .bottom_line(reg_write_data_s3), .cmd(alu_b_mux_cmd), .out(alu_b__));
+    OpMux3 alu_a_mux(.default_line(alu_a_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_a_mux_cmd), .out(alu_a__));
+    OpMux3 alu_b_mux(.default_line(alu_b_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_b_mux_cmd), .out(alu_b__));
 
 
-    PC pc_m(.cmd(pc_cmd), .load_pc(load_pc), .rst(rst), .inc_pc(inc_pc), .pc(pc), .clk(clk));
+    PC pc_m(.cmd(pc_cmd), .load_pc(load_pc), .rst(rst), .inc_pc(inc_pc__), .pc(pc), .clk(clk));
 
-    Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst));
+    Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst__));
 
     Registers registers_m(
         .read1(read1), .read2(read2),
@@ -75,9 +76,12 @@ module ExpMipsCPU(
 
     assign read1_eq_read2 = read1_out == read2_out;
 
-    always_comb begin
-        opcode = inst[31:26];
-        funct = inst[5:0];
+    // s0: IF
+    always_ff @(posedge clk) begin
+        inc_pc <= inc_pc__;
+        inst <= inst__;
+        opcode <= inst__[31:26];
+        funct <= inst__[5:0];
     end
 
     // s1: ID
@@ -195,6 +199,8 @@ module ExpMipsCPU(
         opcode_s2 <= opcode;
         funct_s2 <= funct;
 
+        read1_s2 <= read1;
+        read2_s2 <= read2;
         alu_a_s2 <= alu_a;
         alu_b_s2 <= alu_b;
         reg_write_passthrough_s2 <= reg_write_passthrough;
@@ -210,8 +216,27 @@ module ExpMipsCPU(
         mem_addr = 0;
         reg_write_data = 0;
 
-        alu_a_mux_cmd = Mux3Type::DEFAULT;
-        alu_b_mux_cmd = Mux3Type::DEFAULT;
+        if (reg_write_enable_s3 &&
+            reg_write_id_s3 != 0 &&
+            reg_write_id_s3 == read1_s2)
+            alu_a_mux_cmd = Mux3Type::TOP;
+        else if (reg_write_enable_s4 &&
+            reg_write_id_s4 != 0 &&
+            reg_write_id_s4 == read1_s2)
+            alu_a_mux_cmd = Mux3Type::BOTTOM;
+        else
+            alu_a_mux_cmd = Mux3Type::DEFAULT;
+
+        if (reg_write_enable_s3 &&
+            reg_write_id_s3 != 0 &&
+            reg_write_id_s3 == read2_s2)
+            alu_b_mux_cmd = Mux3Type::TOP;
+        else if (reg_write_enable_s4 &&
+            reg_write_id_s4 != 0 &&
+            reg_write_id_s4 == read2_s2)
+            alu_b_mux_cmd = Mux3Type::BOTTOM;
+        else
+            alu_b_mux_cmd = Mux3Type::DEFAULT;
 
         unique casez (opcode_s2)
             6'b001_???: // I: i

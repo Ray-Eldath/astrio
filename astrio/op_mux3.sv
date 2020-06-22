@@ -15,9 +15,9 @@ module OpMux3(
                 out = 0;
             Mux3Type::DEFAULT:
                 out = default_line;
-            Mux3Type::LEFT:
+            Mux3Type::TOP:
                 out = top_line;
-            Mux3Type::RIGHT:
+            Mux3Type::BOTTOM:
                 out = bottom_line;
             default:
                 out = default_line;
