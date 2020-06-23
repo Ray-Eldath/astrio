@@ -57,9 +57,9 @@ private:
         else if (inst.opcode == "000101")
             ss << "bne " << inst.rs << ", " << inst.rt << ", " << lpadAddr(addr + (inst.immi << 2) + pc_inc);
         else if (inst.opcode == "100011")
-            ss << "lw " << inst.rt << ", " << inst.rs << "(" << inst.immi << ")";
+            ss << "lw " << inst.rt << ", " << inst.immi << "(" << inst.rs << ")";
         else if (inst.opcode == "101011")
-            ss << "sw " << inst.rt << ", " << inst.rs << "(" << inst.immi << ")";
+            ss << "sw " << inst.rt << ", " << inst.immi << "(" << inst.rs << ")";
 
         return ss.str();
     }

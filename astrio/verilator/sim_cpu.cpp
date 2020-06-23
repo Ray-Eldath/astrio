@@ -176,7 +176,20 @@ CPU_InstsTester *test_debug() {
     return buildTestCase("debug", astrio, 10);
 }
 
-CPU_InstsTester *test_debug_bypassing() {
+CPU_InstsTester *test_bypassing_mem() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio
+            ->li(Register::$t1, 10)
+            ->sw(Register::$t1, Register::$sp, 0)
+            ->lw(Register::$s1, Register::$sp, 0)
+            ->sw(Register::$s1, Register::$sp, -4)
+            ->lw(Register::$s2, Register::$sp, -4);
+
+    return buildTestCase("bypassing_mem", astrio, 5);
+}
+
+CPU_InstsTester *test_bypassing_ex() {
     auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
 
     astrio
@@ -186,7 +199,7 @@ CPU_InstsTester *test_debug_bypassing() {
             ->add(Register::$s1, Register::$t3, Register::$t1) // 1a
             ->add(Register::$s2, Register::$t1, Register::$t3); // 2b
 
-    return buildTestCase("debug_bypassing", astrio, 5);
+    return buildTestCase("bypassing_ex", astrio, 5);
 }
 
 int main(int argc, char **argv) {
@@ -200,14 +213,17 @@ int main(int argc, char **argv) {
 //    recursive_fib->run();
     auto debug = test_debug();
     debug->run();
-    auto debug_bypassing = test_debug_bypassing();
-    debug_bypassing->run();
+    auto bypassing_ex = test_bypassing_ex();
+    bypassing_ex->run();
+    auto bypassing_mem = test_bypassing_mem();
+    bypassing_mem->run();
 
 //    delete loop_sum;
 //    delete lw_sw;
 //    delete recursive_fib;
     delete debug;
-    delete debug_bypassing;
+    delete bypassing_ex;
+    delete bypassing_mem;
 
     exit(EXIT_SUCCESS);
 }

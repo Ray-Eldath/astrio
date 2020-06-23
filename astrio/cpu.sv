@@ -2,6 +2,7 @@ import Types::*;
 import CPUType::*;
 import ALUType::*;
 import PCType::*;
+import Mux2Type::*;
 import Mux3Type::*;
 
 module Astrio(
@@ -11,9 +12,13 @@ module Astrio(
 );
 
 
+    //
+    // declare wires
+    //
     // IF/ID
     inst_t inst, inst__;
     addr_t inc_pc, inc_pc__;
+    addr_t inc_pc_shifted;
 
     // PC
     PCType::pc_cmd_t pc_cmd;
@@ -40,8 +45,8 @@ module Astrio(
     op_t reg_write_data_pt, reg_write_data_pt_s2;
 
     op_t read1_out, read2_out;
-    reg_id_t read1, read1_s2;
-    reg_id_t read2, read2_s2; // pass to s2 for hazard detection & bypassing
+    reg_id_t read1, read1_s2, read1_s3;
+    reg_id_t read2, read2_s2, read2_s3; // pass to s2 for bypassing of EX and s3 for bypassing of MEM
     bit read1_eq_read2;
 
     // mem
@@ -50,14 +55,23 @@ module Astrio(
     op_t mem_write_data, mem_write_data__, mem_write_data_s2, mem_write_data_s3;
     op_t mem_read_out;
 
+    //
     // bypassing
     //
     // ALU
-    Mux3Type::cmd_t alu_a_mux_cmd, alu_b_mux_cmd;
-    OpMux3 alu_a_mux(.default_line(alu_a_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_a_mux_cmd), .out(alu_a__));
-    OpMux3 alu_b_mux(.default_line(alu_b_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_b_mux_cmd), .out(alu_b__));
+    bit alu_a_locked, alu_b_locked;
+    Mux3Type::cmd_t alu_a_mux, alu_b_mux;
+    OpMux3 alu_a_mux__(.default_line(alu_a_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_a_mux), .out(alu_a__));
+    OpMux3 alu_b_mux__(.default_line(alu_b_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_b_mux), .out(alu_b__));
+
+    // MEM
+    Mux2Type::cmd_t mem_write_data_mux;
+    OpMux2 mem_write_data_mux__(.this_line(mem_write_data_s3), .that_line(reg_write_data_s4), .cmd(mem_write_data_mux), .out(mem_write_data__));
 
 
+    //
+    // wiring modules
+    //
     PC pc_m(.cmd(pc_cmd), .load_pc(load_pc), .rst(rst), .inc_pc(inc_pc__), .pc(pc), .clk(clk));
 
     Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst__));
@@ -75,6 +89,7 @@ module Astrio(
 
 
     assign read1_eq_read2 = read1_out == read2_out;
+    assign inc_pc_shifted = inc_pc << 2;
 
     // s0: IF
     always_ff @(posedge clk) begin
@@ -88,6 +103,8 @@ module Astrio(
     always_comb begin
         alu_a = 0;
         alu_b = 0;
+        alu_a_locked = 0;
+        alu_b_locked = 0;
         read1 = 0;
         read2 = 0;
         reg_write_enable = 0;
@@ -115,6 +132,7 @@ module Astrio(
                     end
                 endcase
 
+                alu_b_locked = 1;
                 reg_write_enable = 1;
                 reg_write_id = inst[20:16]; // rt
             end
@@ -122,9 +140,7 @@ module Astrio(
                 unique case (opcode)
                     6'b00_0010, 6'b00_0011: begin // j, jal
                         pc_cmd = PCType::LOAD;
-                        alu_a = pc;
-                        alu_b = 2;
-                        load_pc = {alu_out[31:28], inst[25:0], 2'b0};
+                        load_pc = {inc_pc_shifted[31:28], inst[25:0], 2'b0};
 
                         if (opcode == 6'b00_0011) begin // jal
                             reg_write_passthrough = 1;
@@ -176,6 +192,7 @@ module Astrio(
                 read1 = inst[25:21]; // rs
                 alu_a = read1_out;
                 alu_b = {{16{inst[15]}}, inst[15:0]};
+                alu_b_locked = 1;
 
                 unique case (opcode)
                     6'b10_0011: begin // lw
@@ -215,28 +232,29 @@ module Astrio(
     always_comb begin
         mem_addr = 0;
         reg_write_data = 0;
+        alu_a_mux = Mux3Type::DEFAULT;
+        alu_b_mux = Mux3Type::DEFAULT;
 
-        if (reg_write_enable_s3 &&
-            reg_write_id_s3 != 0 &&
-            reg_write_id_s3 == read1_s2)
-            alu_a_mux_cmd = Mux3Type::TOP;
-        else if (reg_write_enable_s4 &&
-            reg_write_id_s4 != 0 &&
-            reg_write_id_s4 == read1_s2)
-            alu_a_mux_cmd = Mux3Type::BOTTOM;
-        else
-            alu_a_mux_cmd = Mux3Type::DEFAULT;
+        // bypassing for EX
+        if (alu_a_locked == 0)
+            if (reg_write_enable_s3 &&
+                reg_write_id_s3 != 0 &&
+                reg_write_id_s3 == read1_s2)
+                alu_a_mux = Mux3Type::TOP;
+            else if (reg_write_enable_s4 &&
+                reg_write_id_s4 != 0 &&
+                reg_write_id_s4 == read1_s2)
+                alu_a_mux = Mux3Type::BOTTOM;
 
-        if (reg_write_enable_s3 &&
-            reg_write_id_s3 != 0 &&
-            reg_write_id_s3 == read2_s2)
-            alu_b_mux_cmd = Mux3Type::TOP;
-        else if (reg_write_enable_s4 &&
-            reg_write_id_s4 != 0 &&
-            reg_write_id_s4 == read2_s2)
-            alu_b_mux_cmd = Mux3Type::BOTTOM;
-        else
-            alu_b_mux_cmd = Mux3Type::DEFAULT;
+        if (alu_b_locked == 0)
+            if (reg_write_enable_s3 &&
+                reg_write_id_s3 != 0 &&
+                reg_write_id_s3 == read2_s2)
+                alu_b_mux = Mux3Type::TOP;
+            else if (reg_write_enable_s4 &&
+                reg_write_id_s4 != 0 &&
+                reg_write_id_s4 == read2_s2)
+                alu_b_mux = Mux3Type::BOTTOM;
 
         unique casez (opcode_s2)
             6'b001_???: // I: i
@@ -256,6 +274,8 @@ module Astrio(
 
         // s2 -> s3
         opcode_s3 <= opcode_s2;
+        read1_s3 <= read1_s2;
+        read2_s3 <= read2_s2;
 
         reg_write_enable_s3 <= reg_write_enable_s2;
         reg_write_id_s3 <= reg_write_id_s2;
@@ -268,11 +288,18 @@ module Astrio(
     always_comb begin
         mem_addr__ = mem_addr_s3;
         mem_write_enable__ = mem_write_enable_s3;
-        mem_write_data__ = mem_write_data_s3;
+
+        // bypassing for MEM
+        if (mem_write_enable_s3 &&
+            reg_write_id_s4 != 0 &&
+            reg_write_id_s4 == read2_s3)
+            mem_write_data_mux = Mux2Type::THAT;
+        else
+            mem_write_data_mux = Mux2Type::THIS;
     end
 
     always_ff @(posedge clk) begin
-        reg_write_data_s4 <= opcode_s3[31:29] == 3'b100 ? mem_read_out:reg_write_data_s3;
+        reg_write_data_s4 <= opcode_s3[31:29] == 3'b100 ? mem_read_out:reg_write_data_s3; // if lw, write from mem_read_out
 
         // s3 -> s4
         opcode_s4 <= opcode_s3;

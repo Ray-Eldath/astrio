@@ -18,7 +18,7 @@ target_include_directories(sim_cpu PRIVATE ../assembler)
 #
 
 set(VERILATOR_INCLUDES constants.sv types.sv)
-set(VERILATOR_INCLUDE_TYPES pc_type.sv alu_type.sv mux3_type.sv cpu_type.sv)
+set(VERILATOR_INCLUDE_TYPES pc_type.sv alu_type.sv mux_type.sv cpu_type.sv)
 
 verilate(sim_pc
         TRACE
@@ -52,6 +52,6 @@ verilate(sim_memory
 
 verilate(sim_cpu
         TRACE
-        SOURCES ${VERILATOR_INCLUDES} ${VERILATOR_INCLUDE_TYPES} pc.sv fetcher.sv registers.sv memory.sv alu.sv alu_controller.sv op_mux3.sv cpu.sv
+        SOURCES ${VERILATOR_INCLUDES} ${VERILATOR_INCLUDE_TYPES} pc.sv fetcher.sv registers.sv memory.sv alu.sv alu_controller.sv op_mux.sv cpu.sv
         INCLUDE_DIRS "."
         PREFIX CPU)
