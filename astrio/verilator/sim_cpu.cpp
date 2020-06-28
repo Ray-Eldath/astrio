@@ -28,7 +28,6 @@ public:
         DUT->Astrio__DOT__loading_inst = 1;
         DUT->chip_select = 0;
 
-        tick();
         for (const auto &testcase: d_testcases) {
             DUT->Astrio__DOT__load_inst = testcase.compiled;
             tick();
@@ -46,12 +45,11 @@ public:
         DUT->Astrio__DOT__loading_inst = 0;
         DUT->chip_select = 1;
         reset();
-        tick();
     }
 
     void onEach(Instruction testcase, TPRINTER *t) override {
         auto regs_p = DUT->Astrio__DOT__registers_m__DOT__regs;
-        uint32_t pc = DUT->Astrio__DOT__pc, inst = DUT->Astrio__DOT__inst;
+        uint32_t pc = DUT->Astrio__DOT__pc, inst = DUT->Astrio__DOT__inst___05F;
         uint32_t regs[32];
         copy(regs_p, regs_p + 32, regs);
 
@@ -86,7 +84,7 @@ inline CPU_InstsTester *buildTestCase(const string &name,
                                       AstrioAssembler *insts,
                                       int spin_off = 0,
                                       bool show_upload_status = false) {
-    for (int i = 0; i < spin_off; i++)
+    for (int i = 0; i <= spin_off; i++)
         insts->nop();
     return new CPU_InstsTester("astrio_" + name, insts->assemble(), show_upload_status);
 }
@@ -165,15 +163,24 @@ CPU_InstsTester *test_debug() {
             ->addi(Register::$t5, Register::$zero, 5)
             ->sw(Register::$t1, Register::$gp, 0)
             ->add(Register::$t1, Register::$t1, Register::$t1)
-            ->nop()
-            ->nop()
-            ->nop()
-            ->nop()
+            ->nop()->nop()->nop()->nop()
             ->beq(Register::$t1, Register::$t2, "nonsense")
             ->jal("nonsense")
             ->lw(Register::$t6, Register::$gp, 0);
 
     return buildTestCase("debug", astrio, 10);
+}
+
+CPU_InstsTester *test_stall_lw() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio
+            ->li(Register::$t1, 213)
+            ->sw(Register::$t1, Register::$sp, 0)
+            ->lw(Register::$t2, Register::$sp, 0)
+            ->move(Register::$s1, Register::$t2);
+
+    return buildTestCase("stall_lw", astrio, 6);
 }
 
 CPU_InstsTester *test_bypassing_mem() {
@@ -217,6 +224,8 @@ int main(int argc, char **argv) {
     bypassing_ex->run();
     auto bypassing_mem = test_bypassing_mem();
     bypassing_mem->run();
+    auto stall_lw = test_stall_lw();
+    stall_lw->run();
 
 //    delete loop_sum;
 //    delete lw_sw;
@@ -224,6 +233,7 @@ int main(int argc, char **argv) {
     delete debug;
     delete bypassing_ex;
     delete bypassing_mem;
+    delete stall_lw;
 
     exit(EXIT_SUCCESS);
 }

@@ -12,27 +12,27 @@ module PC(
 );
     initial pc = InstStartFrom;
 
-    addr_t next_pc;
+    addr_t current_pc;
 
     assign inc_pc = pc+4;
     always_comb begin
         unique case (cmd)
-            PCType::NONE:
-                next_pc = pc;
+            PCType::HOLD:
+                current_pc = pc;
             PCType::INC:
-                next_pc = inc_pc;
+                current_pc = inc_pc;
             PCType::INC_OFFSET:
-                next_pc = inc_pc+load_pc;
+                current_pc = inc_pc+load_pc;
             PCType::LOAD:
-                next_pc = load_pc;
+                current_pc = load_pc;
             default:
-                next_pc = pc;
+                current_pc = pc;
         endcase
 
         if (rst == 1)
-            next_pc = InstStartFrom;
+            current_pc = InstStartFrom;
     end
 
     always_ff @(posedge clk)
-        pc <= next_pc;
+        pc <= current_pc;
 endmodule : PC

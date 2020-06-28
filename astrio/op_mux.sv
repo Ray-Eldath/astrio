@@ -1,12 +1,12 @@
-import Mux3Type::cmd_t;
-import Mux2Type::cmd_t;
+import Mux3Type::mux3_cmd_t;
+import Mux2Type::mux2_cmd_t;
 import Types::op_t;
 
 module OpMux3(
     input op_t default_line,
     input op_t top_line,
     input op_t bottom_line,
-    input Mux3Type::cmd_t cmd,
+    input Mux3Type::mux3_cmd_t cmd,
     output op_t out
 );
 
@@ -28,7 +28,7 @@ endmodule : OpMux3
 module OpMux2(
     input op_t this_line,
     input op_t that_line,
-    input Mux2Type::cmd_t cmd,
+    input Mux2Type::mux2_cmd_t cmd,
     output op_t out
 );
 
