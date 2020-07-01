@@ -100,18 +100,19 @@ module Astrio(
     assign rs = inst[25:21], rt = inst[20:16];
     assign branch1_eq_branch2 = branch_op1 == branch_op2;
     assign inc_pc_shifted = inc_pc << 2;
-    bit flush_inst_pre;
+    bit flush_s1;
 
-    // s0: IF
+    // S0: IF
     always_ff @(posedge clk) begin
+        // S0 -> S1
         pc_s1 <= pc;
         inc_pc <= inc_pc_pre;
-        inst <= flush_inst_pre ? 0:inst_pre;
-        opcode <= inst_pre[31:26];
-        funct <= inst_pre[5:0];
+        inst <= flush_s1 ? 0:inst_pre;
+        opcode <= flush_s1 ? 0:inst_pre[31:26];
+        funct <= flush_s1 ? 0:inst_pre[5:0];
     end
 
-    // s1: ID
+    // S1: ID
     always_comb begin
         alu_a = 0;
         alu_b = 0;
@@ -129,7 +130,7 @@ module Astrio(
         mem_read = 0;
         pc_cmd = PCType::INC;
         load_pc = 0;
-        flush_inst_pre = 0;
+        flush_s1 = 0;
         branch_op1_mux = Mux2Type::THIS;
         branch_op2_mux = Mux2Type::THIS;
 
@@ -179,7 +180,7 @@ module Astrio(
 
                         if ((opcode == 6'b00_0100 && branch1_eq_branch2 == 1) || // beq
                             (opcode == 6'b00_0101 && branch1_eq_branch2 == 0)) begin // bne
-                            flush_inst_pre = 1; // flush prefetched instruction
+                            flush_s1 = 1; // flush prefetched instruction
                             pc_cmd = PCType::INC_OFFSET;
                             load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
                         end
@@ -250,7 +251,7 @@ module Astrio(
     end
 
     always_ff @(posedge clk) begin
-        // s1 -> s2
+        // S1 -> S2
         opcode_s2 <= opcode;
         funct_s2 <= funct;
 
@@ -267,7 +268,7 @@ module Astrio(
         mem_write_data_s2 <= mem_write_data;
     end
 
-    // s2: EX
+    // S2: EX
     always_comb begin
         mem_addr = 0;
         reg_write_data = 0;
@@ -310,7 +311,7 @@ module Astrio(
         reg_write_data_s3 <= reg_write_passthrough_s2 ? reg_write_data_pt_s2:reg_write_data;
         mem_addr_s3 <= mem_addr;
 
-        // s2 -> s3
+        // S2 -> S3
         opcode_s3 <= opcode_s2;
         read1_s3 <= read1_s2;
         read2_s3 <= read2_s2;
@@ -322,7 +323,7 @@ module Astrio(
         mem_write_data_s3 <= mem_write_data_s2;
     end
 
-    // s3: MEM
+    // S3: MEM
     always_comb begin
         mem_addr__ = mem_addr_s3;
         mem_write_enable__ = mem_write_enable_s3;

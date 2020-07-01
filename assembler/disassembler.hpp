@@ -42,7 +42,7 @@ private:
         };
     }
 
-    inline std::string disassemble_I(uint32_t addr, const I_inst &inst) {
+    inline std::string disassemble_I(int32_t addr, const I_inst &inst) {
         std::stringstream ss;
         if (inst.opcode == "001000")
             ss << "addi " << inst.rt << ", " << inst.rs << ", " << inst.immi;
@@ -117,7 +117,7 @@ private:
 public:
     AstrioDisassembler(uint16_t pcInc) : pc_inc(pcInc) {}
 
-    std::string disassemble(uint32_t addr, uint32_t inst) {
+    std::string disassemble(int32_t addr, int32_t inst) {
         std::string bin = std::bitset<32>(inst).to_string();
         std::string opcode = bin.substr(0, 6);
         if (opcode == "000000")
