@@ -238,7 +238,7 @@ module Astrio(
         // detects hazard that leads to a one-cycle stall
         if (// lw-R hazard
             (mem_read_s2 == 1 && // previous instruction is lw
-                mem_write_enable == 0 && // current instruction is not sw since lw-sw hazard is handled elsewhere.
+                mem_write_enable == 0 && // current instruction is not sw since lw-sw hazard is bypassed elsewhere.
                 (reg_write_id_s2 == rs ||
                     reg_write_id_s2 == rt))
             ) begin

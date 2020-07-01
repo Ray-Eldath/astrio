@@ -93,7 +93,6 @@ private:
     }
 
     inline uint32_t compile_bne(Register rs, Register rt, int32_t addr, int32_t that_pc) {
-        printf("\n%#x\n", addr);
         return I(0x5, rs, rt, (addr - pc_inc - that_pc) >> 2);
     }
 

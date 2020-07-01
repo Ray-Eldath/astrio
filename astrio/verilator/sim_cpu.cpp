@@ -210,7 +210,7 @@ CPU_InstsTester *test_bypassing_ex() {
     return buildTestCase("bypassing_ex", astrio, 5);
 }
 
-CPU_InstsTester *test_branching_stall1_bypassing_flush1() {
+CPU_InstsTester *test_R_branch() {
     auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
 
     astrio
@@ -218,9 +218,26 @@ CPU_InstsTester *test_branching_stall1_bypassing_flush1() {
             ->nop() // manually stall ONE cc until stall mismatching is fixed
             ->bne(Register::$s1, Register::$zero, "test")
             ->move(Register::$t1, Register::$s1) // should be flushed
+            ->li(Register::$s1, 0)
             ->claim("test")->move(Register::$s2, Register::$s1);
 
-    return buildTestCase("branching_stall1_bypassing_flush1", astrio, 5, true);
+    return buildTestCase("R_branch", astrio, 5);
+}
+
+CPU_InstsTester *test_lw_branch() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio
+            ->li(Register::$t0, 10)
+            ->sw(Register::$t0, Register::$sp, 0)
+            ->lw(Register::$s1, Register::$sp, 0)
+            ->nop()->nop() // manually stall TWO cc until multi-cycles stall is implemented
+            ->bne(Register::$s1, Register::$zero, "test")
+            ->move(Register::$t1, Register::$s1) // should be flushed
+            ->li(Register::$s1, 0)
+            ->claim("test")->move(Register::$s2, Register::$s1);
+
+    return buildTestCase("lw_branch", astrio, 5);
 }
 
 int main(int argc, char **argv) {
@@ -240,8 +257,10 @@ int main(int argc, char **argv) {
     bypassing_mem->run();
     auto stall_lw = test_stall_lw();
     stall_lw->run();
-    auto branching1 = test_branching_stall1_bypassing_flush1();
-    branching1->run();
+    auto branch1 = test_R_branch();
+    branch1->run();
+    auto branch2 = test_lw_branch();
+    branch2->run();
 
 //    delete loop_sum;
 //    delete lw_sw;
@@ -250,7 +269,8 @@ int main(int argc, char **argv) {
     delete bypassing_ex;
     delete bypassing_mem;
     delete stall_lw;
-    delete branching1;
+    delete branch1;
+    delete branch2;
 
     exit(EXIT_SUCCESS);
 }
