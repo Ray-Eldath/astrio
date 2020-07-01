@@ -52,6 +52,6 @@ verilate(sim_memory
 
 verilate(sim_cpu
         TRACE
-        SOURCES ${VERILATOR_INCLUDES} ${VERILATOR_INCLUDE_TYPES} fetcher.sv registers.sv memory.sv alu.sv alu_controller.sv op_mux.sv cpu.sv
+        SOURCES ${VERILATOR_INCLUDES} ${VERILATOR_INCLUDE_TYPES} pc.sv fetcher.sv registers.sv memory.sv alu.sv alu_controller.sv op_mux.sv cpu.sv
         INCLUDE_DIRS "."
         PREFIX CPU)

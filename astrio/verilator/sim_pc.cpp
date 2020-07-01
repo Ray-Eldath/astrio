@@ -19,10 +19,10 @@ uint32_t inst_start_from = PC_Parameters::_IDataInstStartFrom::InstStartFrom;
 typedef PC_PCType::pc_cmd_t cmd;
 std::vector<PC_TestCase> PC_testcases = {
         PC_TestCase{"inc", cmd::INC, 0, 0, inst_start_from + 0x4},
-        PC_TestCase{"none", cmd::NONE, 0, 0, inst_start_from + 0x4},
-        PC_TestCase{"none", cmd::NONE, 0, 0, inst_start_from + 0x4},
+        PC_TestCase{"hold", cmd::HOLD, 0, 0, inst_start_from + 0x4},
+        PC_TestCase{"hold", cmd::HOLD, 0, 0, inst_start_from + 0x4},
         PC_TestCase{"load", cmd::LOAD, 0, 0x1, 0x1},
-        PC_TestCase{"rst", cmd::NONE, 1, 0, inst_start_from}
+        PC_TestCase{"hold", cmd::HOLD, 1, 0, inst_start_from}
 };
 
 class PC_Tester : public TESTER<PC, PC_TestCase> {

@@ -16,14 +16,13 @@ module Astrio(
     // declare wires
     //
     // IF/ID
-    inst_t inst, inst__;
-    addr_t inc_pc, inc_pc__;
+    inst_t inst, inst_pre;
+    addr_t inc_pc, inc_pc_pre;
     addr_t inc_pc_shifted;
 
     // PC
-    // PCType::pc_cmd_t pc_cmd;
-    addr_t pc;
-    // addr_t load_pc;
+    PCType::pc_cmd_t pc_cmd;
+    addr_t pc, pc_s0, load_pc;
 
     // Fetcher
     inst_t load_inst;
@@ -77,9 +76,9 @@ module Astrio(
     //
     // wiring modules
     //
-    // PC pc_m(.cmd(pc_cmd), .load_pc(load_pc), .rst(rst), .inc_pc(inc_pc__), .pc(pc), .clk(clk));
+    PC pc_m(.cmd(pc_cmd), .load_pc(load_pc), .rst(rst), .inc_pc(inc_pc_pre), .pc(pc), .clk(clk));
 
-    Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst__));
+    Fetcher fetcher_m(.addr(pc), .load_inst(load_inst), .load(loading_inst), .chip_select(chip_select), .clk(clk), .inst(inst_pre));
 
     Registers registers_m(.read1(read1), .read2(read2),
         .enable_write(reg_write_enable__), .write_id(reg_write_id__), .write_data(reg_write_data__),
@@ -95,18 +94,15 @@ module Astrio(
     assign rs = inst[25:21], rt = inst[20:16];
     assign read1_eq_read2 = read1_out == read2_out;
     assign inc_pc_shifted = inc_pc << 2;
-
-    initial pc = Parameters::InstStartFrom;
-    always_comb
-        if (rst == 1)
-            pc = Parameters::InstStartFrom;
+    bit flush_inst_pre;
 
     // s0: IF
     always_ff @(posedge clk) begin
-        inc_pc <= inc_pc__;
-        inst <= inst__;
-        opcode <= inst__[31:26];
-        funct <= inst__[5:0];
+        pc_s0 <= pc;
+        inc_pc <= inc_pc_pre;
+        inst <= flush_inst_pre ? 0:inst_pre;
+        opcode <= inst_pre[31:26];
+        funct <= inst_pre[5:0];
     end
 
     // s1: ID
@@ -125,8 +121,9 @@ module Astrio(
         mem_write_enable = 0;
         mem_write_data = 0;
         mem_read = 0;
-        // load_pc = 0;
-        // pc_cmd = PCType::HOLD;
+        pc_cmd = PCType::INC;
+        load_pc = 0;
+        flush_inst_pre = 0;
 
         unique casez (opcode)
             6'b001_???: begin // I: i
@@ -150,8 +147,8 @@ module Astrio(
             6'b000_???: begin
                 unique case (opcode)
                     6'b00_0010, 6'b00_0011: begin // j, jal
-                        // pc_cmd = PCType::LOAD;
-                        pc = {inc_pc_shifted[31:28], inst[25:0], 2'b0};
+                        pc_cmd = PCType::LOAD;
+                        load_pc = {inc_pc_shifted[31:28], inst[25:0], 2'b0};
 
                         if (opcode == 6'b00_0011) begin // jal
                             reg_write_passthrough = 1;
@@ -166,8 +163,9 @@ module Astrio(
 
                         if ((opcode == 6'b00_0100 && read1_eq_read2 == 1) || // beq
                             (opcode == 6'b00_0101 && read1_eq_read2 == 0)) begin // bne
-                            // pc_cmd = PCType::INC_OFFSET;
-                            pc = inc_pc+{{14{inst[15]}}, inst[15:0], 2'b0};
+                            flush_inst_pre = 1; // flush prefetched instruction
+                            pc_cmd = PCType::INC_OFFSET;
+                            load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
                         end
                     end
                     6'b0: begin // R
@@ -180,8 +178,8 @@ module Astrio(
                                 alu_b = {{27{1'b0}}, inst[10:6]};
                             end
                             6'b00_1000: begin // jr
-                                // pc_cmd = PCType::LOAD;
-                                pc = read1_out; // rs
+                                pc_cmd = PCType::LOAD;
+                                load_pc = read1_out; // rs
                             end
                             default: begin // add, sub, and, or, slt
                                 alu_a = read1_out;
@@ -220,15 +218,17 @@ module Astrio(
             default: begin end
         endcase
 
+        // lw-R hazard detection, will leads to a one-cycle stall
         if (mem_read_s2 == 1 && // previous instruction is lw
-            mem_write_enable == 0 && // current instruction is not sw
+            mem_write_enable == 0 && // current instruction is not sw since lw-sw type hazard is handled by Path 3.
             (reg_write_id_s2 == rs ||
                 reg_write_id_s2 == rt)) begin
-            $display("stall");
+            // stall for one cycle: hold pc, clear control signals
+            pc_cmd = PCType::LOAD;
+            load_pc = pc_s0;
             reg_write_enable = 0;
             mem_write_enable = 0;
-        end else
-            pc += 4;
+        end
     end
 
     always_ff @(posedge clk) begin

@@ -49,7 +49,7 @@ public:
 
     void onEach(Instruction testcase, TPRINTER *t) override {
         auto regs_p = DUT->Astrio__DOT__registers_m__DOT__regs;
-        uint32_t pc = DUT->Astrio__DOT__pc, inst = DUT->Astrio__DOT__inst___05F;
+        uint32_t pc = DUT->Astrio__DOT__pc, inst = DUT->Astrio__DOT__inst_pre;
         uint32_t regs[32];
         copy(regs_p, regs_p + 32, regs);
 
@@ -178,9 +178,10 @@ CPU_InstsTester *test_stall_lw() {
             ->li(Register::$t1, 213)
             ->sw(Register::$t1, Register::$sp, 0)
             ->lw(Register::$t2, Register::$sp, 0)
-            ->move(Register::$s1, Register::$t2);
+            ->move(Register::$s1, Register::$t2)
+            ->li(Register::$s2, 312);
 
-    return buildTestCase("stall_lw", astrio, 6);
+    return buildTestCase("stall_lw", astrio, 4);
 }
 
 CPU_InstsTester *test_bypassing_mem() {
@@ -209,6 +210,19 @@ CPU_InstsTester *test_bypassing_ex() {
     return buildTestCase("bypassing_ex", astrio, 5);
 }
 
+CPU_InstsTester *test_branching_stall1_bypassing_flush1() {
+    auto astrio = new AstrioAssembler(CPU_Parameters::InstStartFrom);
+
+    astrio
+            ->li(Register::$s1, 10)
+            ->nop()->nop() // manually stall ONE extra cc until bypassing logic is finished
+            ->bne(Register::$s1, Register::$zero, "test")
+            ->move(Register::$t1, Register::$s1) // should be flushed
+            ->claim("test")->move(Register::$s2, Register::$s1);
+
+    return buildTestCase("branching_stall1_bypassing_flush1", astrio, 5, true);
+}
+
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
 
@@ -226,6 +240,8 @@ int main(int argc, char **argv) {
     bypassing_mem->run();
     auto stall_lw = test_stall_lw();
     stall_lw->run();
+    auto branching1 = test_branching_stall1_bypassing_flush1();
+    branching1->run();
 
 //    delete loop_sum;
 //    delete lw_sw;
@@ -234,6 +250,7 @@ int main(int argc, char **argv) {
     delete bypassing_ex;
     delete bypassing_mem;
     delete stall_lw;
+    delete branching1;
 
     exit(EXIT_SUCCESS);
 }

@@ -89,11 +89,12 @@ private:
     inline uint32_t compile_jal(uint32_t addr) { return J(0x3, (addr + pc_inc) >> 2); }
 
     inline uint32_t compile_beq(Register rs, Register rt, int32_t addr, int32_t that_pc) {
-        return I(0x4, rs, rt, (addr - that_pc) >> 2);
+        return I(0x4, rs, rt, (addr - pc_inc - that_pc) >> 2);
     }
 
     inline uint32_t compile_bne(Register rs, Register rt, int32_t addr, int32_t that_pc) {
-        return I(0x5, rs, rt, (addr - that_pc) >> 2);
+        printf("\n%#x\n", addr);
+        return I(0x5, rs, rt, (addr - pc_inc - that_pc) >> 2);
     }
 
     template<ResolvableInstruction inst_type>

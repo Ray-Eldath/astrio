@@ -11,6 +11,7 @@ module Registers(
     output op_t read1_out,
     output op_t read2_out
 );
+    bit out_write_data_pre;
     op_t regs [31:0];
 
     initial begin
@@ -22,6 +23,8 @@ module Registers(
         if (enable_write == 1 && write_id != 0)
             regs[write_id] <= write_data;
 
-    assign read1_out = (enable_write && write_id == read1 && write_id != 0) ? write_data:regs[read1];
-    assign read2_out = (enable_write && write_id == read2 && write_id != 0) ? write_data:regs[read2];
+    assign out_write_data_pre = enable_write && write_id != 0;
+
+    assign read1_out = out_write_data_pre && write_id == read1 ? write_data:regs[read1];
+    assign read2_out = out_write_data_pre && write_id == read2 ? write_data:regs[read2];
 endmodule : Registers
