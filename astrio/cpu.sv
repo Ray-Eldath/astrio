@@ -22,7 +22,7 @@ module Astrio(
 
     // PC
     PCType::pc_cmd_t pc_cmd;
-    addr_t pc, pc_s0, load_pc;
+    addr_t pc, pc_s1, load_pc;
 
     // Fetcher
     inst_t load_inst;
@@ -42,7 +42,7 @@ module Astrio(
 
     // reg
     bit reg_write_enable, reg_write_enable__, reg_write_enable_s2, reg_write_enable_s3, reg_write_enable_s4;
-    op_t reg_write_data, reg_write_data__, reg_write_data_s2, reg_write_data_s3, reg_write_data_s4;
+    op_t reg_write_data, reg_write_data__, reg_write_data_s3, reg_write_data_s4;
     reg_id_t reg_write_id, reg_write_id__, reg_write_id_s2, reg_write_id_s3, reg_write_id_s4;
     bit reg_write_passthrough, reg_write_passthrough_s2;
     op_t reg_write_data_pt, reg_write_data_pt_s2;
@@ -50,7 +50,7 @@ module Astrio(
     op_t read1_out, read2_out;
     reg_id_t read1, read1_s2, read1_s3;
     reg_id_t read2, read2_s2, read2_s3; // pass to s2 for bypassing of EX and s3 for bypassing of MEM
-    bit read1_eq_read2;
+    bit branch1_eq_branch2;
 
     // mem
     addr_t mem_addr, mem_addr__, mem_addr_s3;
@@ -61,7 +61,13 @@ module Astrio(
     //
     // bypassing
     //
-    // ALU
+    // ID
+    op_t branch_op1, branch_op2;
+    Mux2Type::mux2_cmd_t branch_op1_mux, branch_op2_mux;
+    OpMux2 branch_op1_mux__(.this_line(read1_out), .that_line(reg_write_data_s3), .cmd(branch_op1_mux), .out(branch_op1));
+    OpMux2 branch_op2_mux__(.this_line(read2_out), .that_line(reg_write_data_s3), .cmd(branch_op2_mux), .out(branch_op2));
+
+    // EX
     bit alu_a_locked, alu_b_locked;
     Mux3Type::mux3_cmd_t alu_a_mux, alu_b_mux;
     OpMux3 alu_a_mux__(.default_line(alu_a_s2), .top_line(reg_write_data_s3), .bottom_line(reg_write_data_s4), .cmd(alu_a_mux), .out(alu_a__));
@@ -92,13 +98,13 @@ module Astrio(
 
 
     assign rs = inst[25:21], rt = inst[20:16];
-    assign read1_eq_read2 = read1_out == read2_out;
+    assign branch1_eq_branch2 = branch_op1 == branch_op2;
     assign inc_pc_shifted = inc_pc << 2;
     bit flush_inst_pre;
 
     // s0: IF
     always_ff @(posedge clk) begin
-        pc_s0 <= pc;
+        pc_s1 <= pc;
         inc_pc <= inc_pc_pre;
         inst <= flush_inst_pre ? 0:inst_pre;
         opcode <= inst_pre[31:26];
@@ -124,6 +130,8 @@ module Astrio(
         pc_cmd = PCType::INC;
         load_pc = 0;
         flush_inst_pre = 0;
+        branch_op1_mux = Mux2Type::THIS;
+        branch_op2_mux = Mux2Type::THIS;
 
         unique casez (opcode)
             6'b001_???: begin // I: i
@@ -161,8 +169,16 @@ module Astrio(
                         read1 = rs;
                         read2 = rt;
 
-                        if ((opcode == 6'b00_0100 && read1_eq_read2 == 1) || // beq
-                            (opcode == 6'b00_0101 && read1_eq_read2 == 0)) begin // bne
+                        // bypassing for R-B(branch) hazard
+                        if (reg_write_enable_s3 == 1) begin
+                            if (reg_write_id_s3 == rs)
+                                branch_op1_mux = Mux2Type::THAT;
+                            else if (reg_write_id_s3 == rt) // here, two conditions are exclusive
+                                branch_op2_mux = Mux2Type::THAT;
+                        end
+
+                        if ((opcode == 6'b00_0100 && branch1_eq_branch2 == 1) || // beq
+                            (opcode == 6'b00_0101 && branch1_eq_branch2 == 0)) begin // bne
                             flush_inst_pre = 1; // flush prefetched instruction
                             pc_cmd = PCType::INC_OFFSET;
                             load_pc = {{14{inst[15]}}, inst[15:0], 2'b0};
@@ -218,14 +234,16 @@ module Astrio(
             default: begin end
         endcase
 
-        // lw-R hazard detection, will leads to a one-cycle stall
-        if (mem_read_s2 == 1 && // previous instruction is lw
-            mem_write_enable == 0 && // current instruction is not sw since lw-sw type hazard is handled by Path 3.
-            (reg_write_id_s2 == rs ||
-                reg_write_id_s2 == rt)) begin
+        // detects hazard that leads to a one-cycle stall
+        if (// lw-R hazard
+            (mem_read_s2 == 1 && // previous instruction is lw
+                mem_write_enable == 0 && // current instruction is not sw since lw-sw hazard is handled elsewhere.
+                (reg_write_id_s2 == rs ||
+                    reg_write_id_s2 == rt))
+            ) begin
             // stall for one cycle: hold pc, clear control signals
             pc_cmd = PCType::LOAD;
-            load_pc = pc_s0;
+            load_pc = pc_s1;
             reg_write_enable = 0;
             mem_write_enable = 0;
         end
@@ -280,9 +298,8 @@ module Astrio(
         unique casez (opcode_s2)
             6'b001_???: // I: i
                 reg_write_data = alu_out;
-            6'b000_???:
-                if (opcode_s2 == 6'b0) // R
-                    reg_write_data = alu_out;
+            6'b000_000:  // R
+                reg_write_data = alu_out;
             6'b10?_???: // lX, sX
                 mem_addr = alu_out;
             default: begin end

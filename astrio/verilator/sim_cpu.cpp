@@ -215,7 +215,7 @@ CPU_InstsTester *test_branching_stall1_bypassing_flush1() {
 
     astrio
             ->li(Register::$s1, 10)
-            ->nop()->nop() // manually stall ONE extra cc until bypassing logic is finished
+            ->nop() // manually stall ONE cc until stall mismatching is fixed
             ->bne(Register::$s1, Register::$zero, "test")
             ->move(Register::$t1, Register::$s1) // should be flushed
             ->claim("test")->move(Register::$s2, Register::$s1);
