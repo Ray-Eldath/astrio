@@ -1,6 +1,6 @@
 package Parameters;
     parameter InstSpace/* verilator public */=1024;
-    parameter InstStartFrom/* verilator public */=32'h0040_0000;
+    parameter InstStartFrom/* verilator public */=32'h0;
     parameter InstStartFromActual=InstStartFrom-'h4;
 
     parameter MemStaticStartFrom/* verilator public */=32'h1000_0000;

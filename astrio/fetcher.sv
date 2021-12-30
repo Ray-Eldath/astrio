@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 import Types::*;
 import Parameters::*;
 
@@ -6,21 +8,34 @@ module Fetcher(
     input inst_t load_inst,
     input bit load,
     input bit chip_select,
+    input bit rst,
     input bit clk,
     output inst_t inst
 );
-    inst_t insts [(InstStartFrom+InstSpace-1)>>2:InstStartFrom>>2];
-
-    addr_t addr_shifted;
+    addr_t addr_shifted, addra;
     assign addr_shifted = addr >> 2;
-    assign inst = chip_select == 0 ? 32'b0:insts[addr_shifted];
 
-    // instruction loading falicity is designed for loading instructions
-    // directly programmably, i.e. infill instructions in C++. this facility
-    // may be deprecated in actual on-board experiment since instruction loading
-    // is handled by UART, PS-PL interconnection or other peripherals.
-    always_ff @(posedge clk)
+    inst_t bram_inst;
+//    blk_mem_gen_0 bram_insts (
+//        .clka(clk),    // input wire clka
+//        .ena(chip_select),      // input wire ena
+//        .addra(addr_shifted),  // input wire [9 : 0] addra
+//        .douta(bram_inst)  // output wire [31 : 0] douta
+//    );
+
+    inst_t insts [(InstStartFrom+InstSpace-1)>>2:InstStartFrom>>2];
+    assign inst = (rst == 1 || chip_select == 0) ? 32'b0: insts[addr_shifted];
+
+//    assign inst = chip_select == 0 ? 32'b0 : bram_inst;
+
+    var int i;
+    initial begin
+        $readmemh("insts.mem", insts);
+        for (i = 0; i < 10; i++)
+            $display("%h", insts[i]);
+    end
+/*    always_ff @(posedge clk)
         if (load == 1)
             insts[addr_shifted] <= load_inst;
-
+*/
 endmodule : Fetcher

@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 import Mux3Type::mux3_cmd_t;
 import Mux2Type::mux2_cmd_t;
 import Types::op_t;

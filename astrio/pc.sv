@@ -10,8 +10,6 @@ module PC(
     output addr_t pc,
     output addr_t inc_pc
 );
-    initial pc = InstStartFrom;
-
     addr_t current_pc;
 
     assign inc_pc = pc+4;
@@ -30,7 +28,7 @@ module PC(
         endcase
 
         if (rst == 1)
-            current_pc = InstStartFrom;
+            current_pc = InstStartFromActual;
     end
 
     always_ff @(posedge clk)
