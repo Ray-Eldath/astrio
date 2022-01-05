@@ -33,7 +33,7 @@ private:
         return ss.str();
     }
 
-    static inline I_inst parse_I(std::string bin) {
+    static inline I_inst parse_I(const std::string &bin) {
         return I_inst{
                 nameOf((Register) std::stoi(bin.substr(6, 5), nullptr, 2)),
                 nameOf((Register) std::stoi(bin.substr(11, 5), nullptr, 2)),
@@ -42,7 +42,7 @@ private:
         };
     }
 
-    inline std::string disassemble_I(int32_t addr, const I_inst &inst) {
+    [[nodiscard]] inline std::string disassemble_I(uint32_t addr, const I_inst &inst) const {
         std::stringstream ss;
         if (inst.opcode == "001000")
             ss << "addi " << inst.rt << ", " << inst.rs << ", " << inst.immi;
@@ -64,7 +64,7 @@ private:
         return ss.str();
     }
 
-    static inline R_inst parse_R(std::string bin) {
+    static inline R_inst parse_R(const std::string &bin) {
         return R_inst{
                 nameOf((Register) std::stoi(bin.substr(6, 5), nullptr, 2)),
                 nameOf((Register) std::stoi(bin.substr(11, 5), nullptr, 2)),
@@ -93,6 +93,8 @@ private:
             else ss << "sll " << inst.rt << ", " << inst.shamt;
         } else if (inst.funct == "000010")
             ss << "srl " << inst.rt << ", " << inst.shamt;
+        else if (inst.funct == "101010")
+            ss << "slt " << inst.rd << ", " << inst.rs << ", " << inst.rt;
 
         return ss.str();
     }
@@ -115,9 +117,9 @@ private:
     }
 
 public:
-    AstrioDisassembler(uint16_t pcInc) : pc_inc(pcInc) {}
+    explicit AstrioDisassembler(uint16_t pcInc) : pc_inc(pcInc) {}
 
-    std::string disassemble(int32_t addr, int32_t inst) {
+    std::string disassemble(uint32_t addr, uint32_t inst) {
         std::string bin = std::bitset<32>(inst).to_string();
         std::string opcode = bin.substr(0, 6);
         if (opcode == "000000")
